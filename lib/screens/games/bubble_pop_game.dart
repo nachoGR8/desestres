@@ -85,7 +85,7 @@ class _BubblePopGameState extends State<BubblePopGame>
     controller.forward();
   }
 
-  void _popBubble(_Bubble bubble) {
+  Future<void> _popBubble(_Bubble bubble) async {
     if (!_bubbles.any((b) => b.id == bubble.id)) return;
     HapticFeedback.lightImpact();
     SoundService().playPop();
@@ -116,7 +116,7 @@ class _BubblePopGameState extends State<BubblePopGame>
     SchedulerBinding.instance.addPostFrameCallback((_) {
       ctrl.dispose();
     });
-    StorageService().incrementCounter('totalBubbles');
+    await StorageService().incrementCounter('totalBubbles');
   }
 
   void _spawnPopEffect(Offset center, double bubbleSize, Color color) {

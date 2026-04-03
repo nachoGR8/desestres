@@ -176,7 +176,7 @@ class _PimplePopGameState extends State<PimplePopGame>
     setState(() {});
   }
 
-  void _popPimple(_Pimple pimple) {
+  Future<void> _popPimple(_Pimple pimple) async {
     if (!_pimples.any((p) => p.id == pimple.id)) return;
     pimple.squeezeTicker?.cancel();
     pimple.squeezing = false;
@@ -243,7 +243,7 @@ class _PimplePopGameState extends State<PimplePopGame>
       growCtrl.dispose();
       wobbleCtrl.dispose();
     });
-    StorageService().incrementCounter('totalPimples');
+    await StorageService().incrementCounter('totalPimples');
   }
 
   void _triggerShake(double intensity) {

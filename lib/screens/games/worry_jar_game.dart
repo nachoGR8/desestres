@@ -34,14 +34,14 @@ class _WorryJarGameState extends State<WorryJarGame> {
     FocusScope.of(context).unfocus();
   }
 
-  void _dissolveWorry(_Worry worry) {
+  Future<void> _dissolveWorry(_Worry worry) async {
     HapticFeedback.mediumImpact();
     SoundService().playWhoosh();
     setState(() {
       _worries.removeWhere((w) => w.id == worry.id);
       _dissolvedCount++;
     });
-    StorageService().incrementCounter('totalWorries');
+    await StorageService().incrementCounter('totalWorries');
   }
 
   Future<void> _exit() async {
