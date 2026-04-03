@@ -112,7 +112,7 @@ class _MoodScreenState extends State<MoodScreen> {
                 hintText: '¿Quieres agregar una nota? (opcional)',
                 hintStyle: TextStyle(color: AppTheme.textHint),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
@@ -140,7 +140,7 @@ class _MoodScreenState extends State<MoodScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -153,17 +153,17 @@ class _MoodScreenState extends State<MoodScreen> {
                               children: [
                                 Text(
                                   DateFormat('EEEE d', 'es').format(entry.date),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.textPrimary,
+                                    color: Theme.of(context).textTheme.bodyLarge?.color,
                                   ),
                                 ),
                                 if (entry.note != null)
                                   Text(
                                     entry.note!,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
-                                      color: AppTheme.textSecondary,
+                                      color: AppTheme.textHint,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,

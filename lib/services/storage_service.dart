@@ -132,4 +132,58 @@ class StorageService {
     }).toSet();
     return moods.union(sessionDates);
   }
+
+  // --- Gratitude Journal ---
+
+  String get _todayKey {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> saveGratitude(List<String> entries) async {
+    await _streakBox.put('gratitude_$_todayKey', entries.join('|||'));
+  }
+
+  List<String>? getGratitude([String? dateKey]) {
+    final key = dateKey ?? _todayKey;
+    final raw = _streakBox.get('gratitude_$key') as String?;
+    if (raw == null) return null;
+    return raw.split('|||');
+  }
+
+  Map<String, List<String>> getPastGratitude({int days = 7}) {
+    final result = <String, List<String>>{};
+    final now = DateTime.now();
+    for (int i = 0; i < days; i++) {
+      final date = now.subtract(Duration(days: i));
+      final key =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final entries = getGratitude(key);
+      if (entries != null && entries.any((e) => e.isNotEmpty)) {
+        result[key] = entries;
+      }
+    }
+    return result;
+  }
+
+  int get totalGratitudeEntries {
+    return _streakBox.keys
+        .where((k) => k.toString().startsWith('gratitude_'))
+        .length;
+  }
+
+  // --- Cartas read tracking ---
+
+  Future<void> markCartaRead(String achievementId) async {
+    final raw = _streakBox.get('cartasRead', defaultValue: '') as String;
+    final read = raw.isEmpty ? <String>{} : raw.split(',').toSet();
+    if (read.add(achievementId)) {
+      await _streakBox.put('cartasRead', read.join(','));
+    }
+  }
+
+  Set<String> get cartasRead {
+    final raw = _streakBox.get('cartasRead', defaultValue: '') as String;
+    return raw.isEmpty ? <String>{} : raw.split(',').toSet();
+  }
 }
