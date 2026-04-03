@@ -89,10 +89,10 @@ class _PimplePopGameState extends State<PimplePopGame>
     HapticFeedback.lightImpact();
     SoundService().playClick();
     setState(() {});
-    // Start squeeze progress ticker
+    // Start squeeze progress ticker (16ms for ~60 FPS)
     pimple.squeezeTicker?.cancel();
     pimple.squeezeTicker = Timer.periodic(
-      const Duration(milliseconds: 40),
+      const Duration(milliseconds: 16),
       (_) => _updateSqueeze(pimple),
     );
   }
@@ -106,9 +106,12 @@ class _PimplePopGameState extends State<PimplePopGame>
     final progress = (elapsed / pimple.holdDuration).clamp(0.0, 1.0);
     pimple.squeezeProgress = progress;
 
-    // Haptic pulses while squeezing
+    // Haptic pulses while squeezing (adaptive to frame rate)
     if (progress > 0.3 && progress < 0.95) {
-      if ((elapsed * 8).floor() % 2 == 0) {
+      // Trigger haptic every ~125ms (8 pulses per second)
+      final pulseCount = (elapsed * 8).floor();
+      if (pimple.lastHapticPulse != pulseCount) {
+        pimple.lastHapticPulse = pulseCount;
         HapticFeedback.selectionClick();
       }
     }
@@ -176,17 +179,20 @@ class _PimplePopGameState extends State<PimplePopGame>
       Offset center, double size, _PimpleType type, double intensity) {
     final controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1100), // Slightly longer for viscosity
     );
 
-    // More pus streams for higher intensity / bigger pimples
+    // More pus streams for higher intensity / bigger pimples with realistic distribution
     final streamCount = 3 + (intensity * 5).round() + _random.nextInt(3);
     final streams = List.generate(streamCount, (i) {
       final baseAngle = i * 2 * pi / streamCount;
-      final angle = baseAngle + (_random.nextDouble() - 0.5) * 0.8;
-      final speed = 0.6 + _random.nextDouble() * 0.8 + intensity * 0.4;
-      final length = 0.4 + _random.nextDouble() * 0.6;
-      final thickness = 3.0 + _random.nextDouble() * 4;
+      // More random variation for realistic spray pattern
+      final angle = baseAngle + (_random.nextDouble() - 0.5) * 1.2;
+      // Variable speed with intensity affecting trajectory
+      final speed = 0.7 + _random.nextDouble() * 0.9 + intensity * 0.5;
+      final length = 0.5 + _random.nextDouble() * 0.7;
+      // Variable thickness for pus viscosity
+      final thickness = 2.5 + _random.nextDouble() * 5 + intensity * 2;
       return _PusStream(
         angle: angle,
         speed: speed,
@@ -195,14 +201,14 @@ class _PimplePopGameState extends State<PimplePopGame>
       );
     });
 
-    // Secondary splat drops
-    final dropCount = 4 + _random.nextInt(5);
+    // Secondary splat drops - more for bigger pops
+    final dropCount = 5 + _random.nextInt(6) + (intensity * 3).round();
     final drops = List.generate(dropCount, (i) {
       return _PusDrop(
         angle: _random.nextDouble() * 2 * pi,
-        distance: 0.5 + _random.nextDouble() * 1.0,
-        size: 2.0 + _random.nextDouble() * 4,
-        delay: _random.nextDouble() * 0.3,
+        distance: 0.6 + _random.nextDouble() * 1.2,
+        size: 2.5 + _random.nextDouble() * 5,
+        delay: _random.nextDouble() * 0.25,
       );
     });
 
@@ -220,13 +226,22 @@ class _PimplePopGameState extends State<PimplePopGame>
     controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         if (!mounted) return;
-        // Leave a splat mark behind
-        _splatMarks.add(_SplatMark(
-          center: center,
-          size: size * 0.3,
-          color: _pusColor(type).withValues(alpha: 0.15),
-          createdAt: DateTime.now(),
-        ));
+        // Leave irregular splat marks behind
+        final markCount = 1 + _random.nextInt(3);
+        for (int i = 0; i < markCount; i++) {
+          final markOffset = Offset(
+            center.dx + (_random.nextDouble() - 0.5) * size * 0.4,
+            center.dy + (_random.nextDouble() - 0.5) * size * 0.4,
+          );
+          _splatMarks.add(_SplatMark(
+            center: markOffset,
+            size: size * (0.2 + _random.nextDouble() * 0.25),
+            color: _pusColor(type).withValues(alpha: 0.12 + _random.nextDouble() * 0.08),
+            createdAt: DateTime.now(),
+            rotation: _random.nextDouble() * 2 * pi,
+            irregularity: 0.7 + _random.nextDouble() * 0.3,
+          ));
+        }
         // Clean old marks
         _splatMarks.removeWhere((m) =>
             DateTime.now().difference(m.createdAt).inSeconds > 8);
@@ -291,16 +306,18 @@ class _PimplePopGameState extends State<PimplePopGame>
             // Skin texture dots
             ..._buildSkinTexture(),
 
-            // Splat marks that linger
+            // Splat marks that linger (irregular shapes)
             ..._splatMarks.map((mark) => Positioned(
                   left: mark.center.dx - mark.size / 2,
                   top: mark.center.dy - mark.size / 2,
-                  child: Container(
-                    width: mark.size,
-                    height: mark.size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: mark.color,
+                  child: Transform.rotate(
+                    angle: mark.rotation,
+                    child: CustomPaint(
+                      size: Size(mark.size, mark.size),
+                      painter: _SplatPainter(
+                        color: mark.color,
+                        irregularity: mark.irregularity,
+                      ),
                     ),
                   ),
                 )),
@@ -375,7 +392,7 @@ class _PimplePopGameState extends State<PimplePopGame>
   }
 
   List<Widget> _buildSkinTexture() {
-    // Deterministic small pore dots for skin feel
+    // Deterministic small pore dots for skin feel with subtle animation response
     final rng = Random(42);
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
@@ -383,15 +400,30 @@ class _PimplePopGameState extends State<PimplePopGame>
       final x = rng.nextDouble() * screenW;
       final y = 80 + rng.nextDouble() * (screenH - 160);
       final s = 2.0 + rng.nextDouble() * 2;
+
+      // Check if any pimple is being squeezed nearby for micro-animation
+      double proximityEffect = 0.0;
+      for (final pimple in _pimples) {
+        if (pimple.squeezeProgress > 0) {
+          final distance = ((x - pimple.x).abs() + (y - pimple.y).abs()) / 100;
+          if (distance < 3) {
+            proximityEffect = ((3 - distance) / 3) * pimple.squeezeProgress;
+          }
+        }
+      }
+
+      final enhancedAlpha = (0.15 + proximityEffect * 0.25).clamp(0.0, 1.0);
+      final enhancedSize = s * (1.0 + proximityEffect * 0.3);
+
       return Positioned(
         left: x,
         top: y,
         child: Container(
-          width: s,
-          height: s,
+          width: enhancedSize,
+          height: enhancedSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFFD4A98A).withValues(alpha: 0.15),
+            color: const Color(0xFFD4A98A).withValues(alpha: enhancedAlpha),
           ),
         ),
       );
@@ -399,73 +431,112 @@ class _PimplePopGameState extends State<PimplePopGame>
   }
 
   Widget _buildPimple(_Pimple pimple) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([
-        pimple.growController,
-        pimple.wobbleController,
-      ]),
-      builder: (context, _) {
-        final grow = pimple.growController.value;
-        final wobble = pimple.wobbleController.value;
-        final squeeze = pimple.squeezeProgress;
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: Listenable.merge([
+          pimple.growController,
+          pimple.wobbleController,
+        ]),
+        builder: (context, _) {
+          final grow = pimple.growController.value;
+          final wobble = pimple.wobbleController.value;
+          final squeeze = pimple.squeezeProgress;
 
-        // When squeezing: grows, turns more red, then "bulges"
-        final breathe = 1.0 + wobble * 0.04;
-        final squeezeInflate = 1.0 + squeeze * 0.25;
-        final scale = grow * breathe * squeezeInflate;
-        final currentSize = pimple.size * scale;
+          // Enhanced breathing animation
+          final breathe = 1.0 + wobble * 0.05;
+          // More dramatic squeeze inflate with realistic bulging
+          final squeezeInflate = 1.0 + squeeze * 0.35 + (squeeze > 0.7 ? (squeeze - 0.7) * 0.5 : 0);
+          final scale = grow * breathe * squeezeInflate;
+          final currentSize = pimple.size * scale;
 
-        return Positioned(
-          left: pimple.x - currentSize / 2,
-          top: pimple.y - currentSize / 2,
-          child: GestureDetector(
-            onLongPressStart: (_) => _startSqueezing(pimple),
-            onLongPressEnd: (_) => _stopSqueezing(pimple),
-            onLongPressCancel: () => _stopSqueezing(pimple),
-            child: _PimpleWidget(
-              size: currentSize,
-              type: pimple.type,
-              squeezeProgress: squeeze,
-              opacity: grow.clamp(0.0, 1.0),
-            ),
-          ),
-        );
-      },
+          // Add skin deformation ring around pimple when squeezing
+          final showDeformation = squeeze > 0.1;
+          final deformationSize = currentSize * (1.4 + squeeze * 0.3);
+          final deformationOpacity = (squeeze * 0.3).clamp(0.0, 1.0);
+
+          return Stack(
+            children: [
+              // Skin deformation when squeezing
+              if (showDeformation)
+                Positioned(
+                  left: pimple.x - deformationSize / 2,
+                  top: pimple.y - deformationSize / 2,
+                  child: Opacity(
+                    opacity: deformationOpacity,
+                    child: Container(
+                      width: deformationSize,
+                      height: deformationSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.transparent,
+                            const Color(0xFFFFB4A2).withValues(alpha: 0.4 * squeeze),
+                            const Color(0xFFE8A090).withValues(alpha: 0.6 * squeeze),
+                          ],
+                          stops: const [0.3, 0.7, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              // The pimple itself
+              Positioned(
+                left: pimple.x - currentSize / 2,
+                top: pimple.y - currentSize / 2,
+                child: GestureDetector(
+                  onLongPressStart: (_) => _startSqueezing(pimple),
+                  onLongPressEnd: (_) => _stopSqueezing(pimple),
+                  onLongPressCancel: () => _stopSqueezing(pimple),
+                  child: _PimpleWidget(
+                    size: currentSize,
+                    type: pimple.type,
+                    squeezeProgress: squeeze,
+                    opacity: grow.clamp(0.0, 1.0),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
   Widget _buildPusEffect(_PusEffect effect) {
-    return AnimatedBuilder(
-      animation: effect.controller,
-      builder: (context, _) {
-        final t = effect.controller.value;
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: effect.controller,
+        builder: (context, _) {
+          final t = effect.controller.value;
 
-        return Stack(
-          children: [
-            // Central burst — the "hole" left behind
-            _buildBurstCenter(effect, t),
-            // Pus streams shooting out
-            ...effect.streams.map((s) => _buildPusStream(effect, s, t)),
-            // Secondary drops
-            ...effect.drops
-                .where((d) => t > d.delay)
-                .map((d) => _buildPusDrop(effect, d, t)),
-          ],
-        );
-      },
+          return Stack(
+            children: [
+              // Central burst — the "hole" left behind
+              _buildBurstCenter(effect, t),
+              // Pus streams shooting out
+              ...effect.streams.map((s) => _buildPusStream(effect, s, t)),
+              // Secondary drops
+              ...effect.drops
+                  .where((d) => t > d.delay)
+                  .map((d) => _buildPusDrop(effect, d, t)),
+            ],
+          );
+        },
+      ),
     );
   }
 
   Widget _buildBurstCenter(_PusEffect effect, double t) {
-    final burstProgress = (t * 3).clamp(0.0, 1.0);
-    final fadeOut = (1.0 - (t - 0.5).clamp(0.0, 1.0) * 2).clamp(0.0, 1.0);
-    final burstSize = effect.size * (0.3 + burstProgress * 0.4);
+    final burstProgress = (t * 2.5).clamp(0.0, 1.0);
+    final fadeOut = (1.0 - (t - 0.4).clamp(0.0, 1.0) * 1.67).clamp(0.0, 1.0);
+    final burstSize = effect.size * (0.35 + burstProgress * 0.5);
 
     return Positioned(
       left: effect.center.dx - burstSize / 2,
       top: effect.center.dy - burstSize / 2,
       child: Opacity(
-        opacity: fadeOut * 0.8,
+        opacity: fadeOut * 0.9,
         child: Container(
           width: burstSize,
           height: burstSize,
@@ -473,11 +544,20 @@ class _PimplePopGameState extends State<PimplePopGame>
             shape: BoxShape.circle,
             gradient: RadialGradient(
               colors: [
-                const Color(0xFFE8A090).withValues(alpha: 0.6),
-                _pusColor(effect.type).withValues(alpha: 0.3),
-                const Color(0xFFFFE4D6).withValues(alpha: 0.1),
+                const Color(0xFFD32F2F).withValues(alpha: 0.5 * fadeOut),
+                const Color(0xFFE8A090).withValues(alpha: 0.6 * fadeOut),
+                _pusColor(effect.type).withValues(alpha: 0.4 * fadeOut),
+                const Color(0xFFFFE4D6).withValues(alpha: 0.1 * fadeOut),
               ],
+              stops: const [0.0, 0.3, 0.6, 1.0],
             ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFD32F2F).withValues(alpha: 0.3 * fadeOut),
+                blurRadius: burstSize * 0.4,
+                spreadRadius: -burstSize * 0.1,
+              ),
+            ],
           ),
         ),
       ),
@@ -485,37 +565,55 @@ class _PimplePopGameState extends State<PimplePopGame>
   }
 
   Widget _buildPusStream(_PusEffect effect, _PusStream stream, double t) {
-    // Pus shoots out fast then slows
-    final easedT = Curves.easeOutCubic.transform(t.clamp(0.0, 1.0));
-    final opacity = (1.0 - t * 0.9).clamp(0.0, 1.0);
+    // Pus shoots out fast then slows with viscosity (more realistic easing)
+    final easedT = Curves.easeOutQuart.transform(t.clamp(0.0, 1.0));
+    final opacity = (1.0 - t * 0.85).clamp(0.0, 1.0);
 
-    // Draw as a trail of blobs along the path
+    // Draw as a trail of blobs along the path with varying sizes (viscosity effect)
     return Stack(
-      children: List.generate(4, (i) {
-        final blobT = (easedT - i * 0.08 * stream.length).clamp(0.0, 1.0);
+      children: List.generate(5, (i) {
+        final blobT = (easedT - i * 0.075 * stream.length).clamp(0.0, 1.0);
+        if (blobT <= 0) return const SizedBox.shrink();
+
         final blobDist = effect.size * stream.speed * blobT;
         final px = effect.center.dx + cos(stream.angle) * blobDist;
         final py = effect.center.dy + sin(stream.angle) * blobDist;
-        final blobSize = stream.thickness * (1.0 - i * 0.18) * (1.0 - t * 0.4);
-        final blobOpacity = opacity * (1.0 - i * 0.2);
+
+        // Viscosity: blobs get smaller and elongated as they travel
+        final blobSize = stream.thickness * (1.0 - i * 0.15) * (1.0 - t * 0.35);
+        final blobOpacity = opacity * (1.0 - i * 0.18);
+
+        // Add slight gravity effect to downward trajectory
+        final gravityOffset = sin(stream.angle + pi / 2).abs() * blobT * effect.size * 0.15;
 
         if (blobSize <= 0 || blobOpacity <= 0) return const SizedBox.shrink();
 
+        // Create oval shape for viscosity (elongated in direction of travel)
         return Positioned(
           left: px - blobSize / 2,
-          top: py - blobSize / 2,
+          top: py - blobSize / 2 + gravityOffset,
           child: Opacity(
             opacity: blobOpacity.clamp(0.0, 1.0),
             child: Container(
               width: blobSize,
-              height: blobSize,
+              height: blobSize * (1.0 + stream.speed * 0.3), // Elongate based on speed
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _pusColor(effect.type),
+                borderRadius: BorderRadius.elliptical(
+                  blobSize,
+                  blobSize * (1.0 + stream.speed * 0.3),
+                ),
+                gradient: RadialGradient(
+                  colors: [
+                    _pusColor(effect.type),
+                    _pusColor(effect.type).withValues(alpha: 0.7),
+                  ],
+                  stops: const [0.4, 1.0],
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: _pusColor(effect.type).withValues(alpha: 0.3),
-                    blurRadius: blobSize * 0.5,
+                    color: _pusColor(effect.type).withValues(alpha: 0.4),
+                    blurRadius: blobSize * 0.6,
+                    spreadRadius: blobSize * 0.1,
                   ),
                 ],
               ),
@@ -528,26 +626,41 @@ class _PimplePopGameState extends State<PimplePopGame>
 
   Widget _buildPusDrop(_PusEffect effect, _PusDrop drop, double t) {
     final dropT = ((t - drop.delay) / (1.0 - drop.delay)).clamp(0.0, 1.0);
-    final easedDrop = Curves.easeOutQuad.transform(dropT);
+    // More realistic gravity simulation
+    final easedDrop = Curves.easeInCubic.transform(dropT);
     final dist = effect.size * drop.distance * easedDrop;
-    // Gravity effect: drops fall a bit
-    final gravity = dist * 0.3 * easedDrop;
+    // Enhanced gravity effect with acceleration
+    final gravity = dist * 0.4 * easedDrop * easedDrop;
     final px = effect.center.dx + cos(drop.angle) * dist;
     final py = effect.center.dy + sin(drop.angle) * dist + gravity;
-    final opacity = (1.0 - dropT).clamp(0.0, 1.0);
-    final size = drop.size * (1.0 - dropT * 0.3);
+    final opacity = (1.0 - dropT * 0.9).clamp(0.0, 1.0);
+    // Drops flatten as they fall and hit (realistic deformation)
+    final size = drop.size * (1.0 - dropT * 0.25);
+    final flattenRatio = 1.0 + dropT * 0.4;
 
     return Positioned(
       left: px - size / 2,
-      top: py - size / 2,
+      top: py - size / (2 * flattenRatio),
       child: Opacity(
         opacity: opacity,
         child: Container(
           width: size,
-          height: size,
+          height: size / flattenRatio,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _pusColor(effect.type),
+            borderRadius: BorderRadius.elliptical(size, size / flattenRatio),
+            gradient: RadialGradient(
+              colors: [
+                _pusColor(effect.type),
+                _pusColor(effect.type).withValues(alpha: 0.8),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _pusColor(effect.type).withValues(alpha: 0.25),
+                blurRadius: size * 0.4,
+                offset: Offset(0, size * 0.2),
+              ),
+            ],
           ),
         ),
       ),
@@ -583,6 +696,7 @@ class _Pimple {
   double squeezeProgress = 0; // 0..1
   DateTime? squeezeStart;
   Timer? squeezeTicker;
+  int lastHapticPulse = -1;
 
   _Pimple({
     required this.id,
@@ -651,12 +765,16 @@ class _SplatMark {
   final double size;
   final Color color;
   final DateTime createdAt;
+  final double rotation;
+  final double irregularity;
 
   _SplatMark({
     required this.center,
     required this.size,
     required this.color,
     required this.createdAt,
+    required this.rotation,
+    required this.irregularity,
   });
 }
 
@@ -705,77 +823,161 @@ class _PimplePainter extends CustomPainter {
     final radius = size.width / 2;
     final sp = squeezeProgress; // 0..1
 
-    // Outer inflamed area — gets redder as squeezed
+    // Shadow beneath pimple for depth (darkens with squeeze)
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.15 + sp * 0.1)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawCircle(
+      Offset(center.dx + radius * 0.08, center.dy + radius * 0.12),
+      radius * 0.9,
+      shadowPaint,
+    );
+
+    // Outer inflamed area — gets redder as squeezed with realistic gradient
     final baseAlpha = 0.5 + sp * 0.3;
     final basePaint = Paint()
-      ..color = Color.lerp(
-        const Color(0xFFFFCDB2),
-        const Color(0xFFE8A090),
-        sp,
-      )!
-          .withValues(alpha: baseAlpha)
+      ..shader = RadialGradient(
+        colors: [
+          Color.lerp(
+            const Color(0xFFFFCDB2),
+            const Color(0xFFE8A090),
+            sp * 0.5,
+          )!.withValues(alpha: baseAlpha * 0.7),
+          Color.lerp(
+            const Color(0xFFFFCDB2),
+            const Color(0xFFD32F2F),
+            sp,
+          )!.withValues(alpha: baseAlpha),
+        ],
+        stops: const [0.3, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius, basePaint);
 
-    // Reddish inflammation ring — throbs when squeezing
-    final ringAlpha = 0.3 + sp * 0.5;
-    final ringWidth = radius * (0.14 + sp * 0.08);
+    // Reddish inflammation ring — throbs when squeezing with gradient
+    final ringAlpha = 0.35 + sp * 0.5;
+    final ringWidth = radius * (0.16 + sp * 0.1);
     final ringPaint = Paint()
-      ..color = Color.lerp(_ringColor, const Color(0xFFD32F2F), sp * 0.6)!
-          .withValues(alpha: ringAlpha)
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color.lerp(_ringColor, const Color(0xFFD32F2F), sp * 0.7)!
+              .withValues(alpha: ringAlpha * 1.2),
+          Color.lerp(_ringColor, const Color(0xFFD32F2F), sp * 0.5)!
+              .withValues(alpha: ringAlpha * 0.8),
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: radius * 0.72))
       ..style = PaintingStyle.stroke
       ..strokeWidth = ringWidth;
     canvas.drawCircle(center, radius * 0.72, ringPaint);
 
-    // Secondary ring for depth
+    // Secondary ring for depth with subtle glow
     if (sp > 0.2) {
       final innerRing = Paint()
-        ..color = _ringColor.withValues(alpha: (sp - 0.2) * 0.4)
+        ..color = _ringColor.withValues(alpha: (sp - 0.2) * 0.5)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = radius * 0.06;
+        ..strokeWidth = radius * 0.07
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.05);
       canvas.drawCircle(center, radius * 0.55, innerRing);
     }
 
-    // The head / core — gets bigger and more visible when squeezed
-    final coreRadius = radius * (0.28 + sp * 0.15);
+    // The head / core — gets bigger and more visible when squeezed with 3D shading
+    final coreRadius = radius * (0.30 + sp * 0.18);
     final corePaint = Paint()
-      ..color = _coreColor
+      ..shader = RadialGradient(
+        center: const Alignment(-0.3, -0.3),
+        radius: 0.8,
+        colors: [
+          _coreColor.withValues(alpha: 1.0),
+          Color.lerp(_coreColor, _fillingColor, 0.3)!,
+          Color.lerp(_coreColor, _ringColor, 0.2)!.withValues(alpha: 0.9),
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: coreRadius))
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, coreRadius, corePaint);
 
-    // Inner "filling" showing through — visible when pressing
+    // Subtle rim shadow on core for depth
+    final rimShadow = Paint()
+      ..color = _ringColor.withValues(alpha: 0.3 + sp * 0.2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * 0.04
+      ..maskFilter = MaskFilter.blur(BlurStyle.inner, radius * 0.08);
+    canvas.drawCircle(center, coreRadius * 0.95, rimShadow);
+
+    // Inner "filling" showing through — visible when pressing with realistic texture
     if (sp > 0.3) {
-      final fillingRadius = coreRadius * 0.6 * ((sp - 0.3) / 0.7);
+      final fillingRadius = coreRadius * 0.65 * ((sp - 0.3) / 0.7);
       final fillingPaint = Paint()
-        ..color = _fillingColor.withValues(alpha: 0.7 + sp * 0.3);
+        ..shader = RadialGradient(
+          colors: [
+            _fillingColor.withValues(alpha: 0.9 + sp * 0.1),
+            _fillingColor.withValues(alpha: 0.7 + sp * 0.3),
+          ],
+          stops: const [0.0, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: fillingRadius))
+        ..style = PaintingStyle.fill;
       canvas.drawCircle(center, fillingRadius, fillingPaint);
+
+      // Pus starting to emerge effect
+      if (sp > 0.6) {
+        final emergePaint = Paint()
+          ..color = _fillingColor.withValues(alpha: (sp - 0.6) * 0.8)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, fillingRadius * 0.2);
+        canvas.drawCircle(center, fillingRadius * 1.1, emergePaint);
+      }
     }
 
-    // Core highlight — glossy top-left reflection
+    // Core highlight — glossy top-left reflection (more pronounced)
     final hlOffset = Offset(
-      center.dx - radius * 0.18,
-      center.dy - radius * 0.18,
+      center.dx - radius * 0.20,
+      center.dy - radius * 0.22,
     );
-    final hlRadius = radius * (0.12 + sp * 0.04);
+    final hlRadius = radius * (0.14 + sp * 0.05);
     final hlPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.45 + sp * 0.15);
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withValues(alpha: 0.7 + sp * 0.2),
+          Colors.white.withValues(alpha: 0.3 + sp * 0.1),
+          Colors.white.withValues(alpha: 0.0),
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromCircle(center: hlOffset, radius: hlRadius));
     canvas.drawCircle(hlOffset, hlRadius, hlPaint);
 
-    // Squeeze pressure ring (red pulsing outline when holding)
+    // Secondary smaller highlight for realism
+    final hl2Offset = Offset(
+      center.dx + radius * 0.15,
+      center.dy - radius * 0.08,
+    );
+    final hl2Paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.25 + sp * 0.15);
+    canvas.drawCircle(hl2Offset, radius * 0.08, hl2Paint);
+
+    // Squeeze pressure ring (red pulsing outline when holding) with glow
     if (sp > 0) {
       final pressurePaint = Paint()
-        ..color = const Color(0xFFEF5350).withValues(alpha: sp * 0.4)
+        ..color = const Color(0xFFEF5350).withValues(alpha: sp * 0.5)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2 + sp * 2;
-      canvas.drawCircle(center, radius + 2 + sp * 4, pressurePaint);
+        ..strokeWidth = 2.5 + sp * 2.5
+        ..maskFilter = MaskFilter.blur(BlurStyle.outer, 2 + sp * 3);
+      canvas.drawCircle(center, radius + 3 + sp * 5, pressurePaint);
     }
 
-    // "About to pop" glow
+    // "About to pop" glow (more dramatic)
     if (sp > 0.7) {
+      final glowIntensity = (sp - 0.7) / 0.3;
       final glowPaint = Paint()
-        ..color = _coreColor.withValues(alpha: (sp - 0.7) * 2)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.3);
-      canvas.drawCircle(center, coreRadius * 1.3, glowPaint);
+        ..color = _coreColor.withValues(alpha: glowIntensity * 0.8)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * (0.4 + glowIntensity * 0.3));
+      canvas.drawCircle(center, coreRadius * (1.3 + glowIntensity * 0.2), glowPaint);
+
+      // Add pulsing red glow indicating imminent pop
+      final redGlowPaint = Paint()
+        ..color = const Color(0xFFFF5252).withValues(alpha: glowIntensity * 0.4)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.5);
+      canvas.drawCircle(center, radius * 1.1, redGlowPaint);
     }
   }
 
@@ -815,4 +1017,52 @@ class _PimplePainter extends CustomPainter {
   @override
   bool shouldRepaint(_PimplePainter old) =>
       type != old.type || squeezeProgress != old.squeezeProgress;
+}
+
+// --- Splat Painter for irregular marks ---
+
+class _SplatPainter extends CustomPainter {
+  final Color color;
+  final double irregularity;
+
+  _SplatPainter({required this.color, required this.irregularity});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    // Create irregular splat shape using path
+    final path = Path();
+    final points = 8 + (irregularity * 6).round();
+    for (int i = 0; i < points; i++) {
+      final angle = (i / points) * 2 * pi;
+      // Vary radius for each point to create irregular shape
+      final pointRadius = radius * (0.6 + irregularity * 0.4 + (i % 3) * 0.15);
+      final x = center.dx + cos(angle) * pointRadius;
+      final y = center.dy + sin(angle) * pointRadius;
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        // Use quadratic bezier for smooth irregular edges
+        final prevAngle = ((i - 1) / points) * 2 * pi;
+        final prevRadius = radius * (0.6 + irregularity * 0.4 + ((i - 1) % 3) * 0.15);
+        final prevX = center.dx + cos(prevAngle) * prevRadius;
+        final prevY = center.dy + sin(prevAngle) * prevRadius;
+        final controlX = (prevX + x) / 2 + (irregularity - 0.5) * radius * 0.2;
+        final controlY = (prevY + y) / 2 + (irregularity - 0.5) * radius * 0.2;
+        path.quadraticBezierTo(controlX, controlY, x, y);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_SplatPainter old) =>
+      color != old.color || irregularity != old.irregularity;
 }
