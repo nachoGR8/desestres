@@ -21,9 +21,38 @@ class SoundService {
   late final Uint8List _breathInSound;
   late final Uint8List _breathOutSound;
 
+  /// Pool of pre-created players to avoid iOS cold-start latency.
+  final List<AudioPlayer> _pool = [];
+  static const _poolSize = 4;
+
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _enabled = prefs.getBool(_key) ?? true;
+
+    // Configure global audio context for iOS:
+    // - Play even when silent switch is on
+    // - Mix with other audio (music, etc.)
+    final audioContext = AudioContext(
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.playback,
+        options: {
+          AVAudioSessionOptions.mixWithOthers,
+        },
+      ),
+      android: AudioContextAndroid(
+        isSpeakerphoneOn: false,
+        audioMode: AndroidAudioMode.normal,
+        contentType: AndroidContentType.sonification,
+        usageType: AndroidUsageType.game,
+        audioFocus: AndroidAudioFocus.none,
+      ),
+    );
+    AudioPlayer.global.setAudioContext(audioContext);
+
+    // Pre-create player pool for low-latency playback
+    for (int i = 0; i < _poolSize; i++) {
+      _pool.add(AudioPlayer());
+    }
 
     _popSound = _generatePop();
     _bellSound = _generateBell();
@@ -50,12 +79,16 @@ class SoundService {
   Future<void> playBreathIn() => _play(_breathInSound);
   Future<void> playBreathOut() => _play(_breathOutSound);
 
+  int _poolIndex = 0;
+
   Future<void> _play(Uint8List wav) async {
     if (!_enabled) return;
     try {
-      final player = AudioPlayer();
+      // Round-robin through pre-created players for low latency
+      final player = _pool[_poolIndex];
+      _poolIndex = (_poolIndex + 1) % _poolSize;
+      await player.stop(); // Stop any previous sound on this player
       await player.play(BytesSource(wav));
-      player.onPlayerComplete.listen((_) => player.dispose());
     } catch (_) {
       // Silently fail — sounds are non-critical
     }
