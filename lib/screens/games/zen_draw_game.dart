@@ -108,7 +108,7 @@ class _ZenDrawGameState extends State<ZenDrawGame>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -120,7 +120,7 @@ class _ZenDrawGameState extends State<ZenDrawGame>
                   IconButton(
                     onPressed: _exit,
                     icon: const Icon(Icons.arrow_back_rounded),
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).iconTheme.color,
                   ),
                   Expanded(
                     child: Text(
@@ -142,7 +142,7 @@ class _ZenDrawGameState extends State<ZenDrawGame>
               child: Container(
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(

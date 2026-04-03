@@ -100,7 +100,7 @@ class _MandalaGameState extends State<MandalaGame> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -111,7 +111,7 @@ class _MandalaGameState extends State<MandalaGame> {
                   IconButton(
                     onPressed: _exit,
                     icon: const Icon(Icons.arrow_back_rounded),
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).iconTheme.color,
                   ),
                   Expanded(
                     child: Text(
@@ -147,6 +147,7 @@ class _MandalaGameState extends State<MandalaGame> {
                               palette: _palette,
                               rings: _rings,
                               sectors: _sectors,
+                              surfaceColor: Theme.of(context).colorScheme.surface,
                             ),
                             size: canvasSize,
                           ),
@@ -205,6 +206,7 @@ class _MandalaPainter extends CustomPainter {
   final List<Color> palette;
   final int rings;
   final int sectors;
+  final Color surfaceColor;
 
   _MandalaPainter({
     required this.colors,
@@ -212,6 +214,7 @@ class _MandalaPainter extends CustomPainter {
     required this.palette,
     required this.rings,
     required this.sectors,
+    required this.surfaceColor,
   });
 
   @override
@@ -242,7 +245,7 @@ class _MandalaPainter extends CustomPainter {
           ..close();
 
         final idx = colors[r][s];
-        final fill = idx >= 0 ? palette[idx] : Colors.white;
+        final fill = idx >= 0 ? palette[idx] : surfaceColor;
         canvas.drawPath(path, Paint()..color = fill);
         canvas.drawPath(path, linePaint);
       }
@@ -253,7 +256,7 @@ class _MandalaPainter extends CustomPainter {
       center,
       centerR,
       Paint()
-        ..color = centerColor >= 0 ? palette[centerColor] : Colors.white,
+        ..color = centerColor >= 0 ? palette[centerColor] : surfaceColor,
     );
     canvas.drawCircle(center, centerR, linePaint);
 

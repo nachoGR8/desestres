@@ -11,8 +11,7 @@ class WorryJarGame extends StatefulWidget {
   State<WorryJarGame> createState() => _WorryJarGameState();
 }
 
-class _WorryJarGameState extends State<WorryJarGame>
-    with TickerProviderStateMixin {
+class _WorryJarGameState extends State<WorryJarGame> {
   final _textController = TextEditingController();
   final List<_Worry> _worries = [];
   int _dissolvedCount = 0;
@@ -37,17 +36,10 @@ class _WorryJarGameState extends State<WorryJarGame>
   void _dissolveWorry(_Worry worry) {
     HapticFeedback.mediumImpact();
     setState(() {
-      worry.dissolving = true;
+      _worries.removeWhere((w) => w.id == worry.id);
+      _dissolvedCount++;
     });
-
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (!mounted) return;
-      setState(() {
-        _worries.removeWhere((w) => w.id == worry.id);
-        _dissolvedCount++;
-      });
-      StorageService().incrementCounter('totalWorries');
-    });
+    StorageService().incrementCounter('totalWorries');
   }
 
   Future<void> _exit() async {
@@ -67,7 +59,7 @@ class _WorryJarGameState extends State<WorryJarGame>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
@@ -80,7 +72,7 @@ class _WorryJarGameState extends State<WorryJarGame>
                   IconButton(
                     onPressed: _exit,
                     icon: const Icon(Icons.arrow_back_rounded),
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).iconTheme.color,
                   ),
                   Expanded(
                     child: Text(
@@ -138,7 +130,7 @@ class _WorryJarGameState extends State<WorryJarGame>
                         hintText: '¿Qué te preocupa?',
                         hintStyle: TextStyle(color: AppTheme.textHint),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: Theme.of(context).colorScheme.surface,
                         counterText: '',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -176,7 +168,7 @@ class _WorryJarGameState extends State<WorryJarGame>
                 margin: const EdgeInsets.symmetric(horizontal: 24),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: AppTheme.primary.withValues(alpha: 0.15),
@@ -242,7 +234,6 @@ class _WorryJarGameState extends State<WorryJarGame>
 class _Worry {
   final int id;
   final String text;
-  bool dissolving = false;
 
   _Worry({
     required this.id,
@@ -284,7 +275,7 @@ class _WorryChip extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -302,7 +293,7 @@ class _WorryChip extends StatelessWidget {
               child: Text(
                 worry.text,
                 style: TextStyle(
-                  color: AppTheme.textPrimary,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
                   fontSize: 14,
                 ),
               ),
@@ -317,23 +308,11 @@ class _WorryChip extends StatelessWidget {
       ),
     );
 
-    if (worry.dissolving) {
-      chip = chip
-          .animate()
-          .fadeOut(duration: 600.ms)
-          .scale(
-            begin: const Offset(1.0, 1.0),
-            end: const Offset(0.8, 0.8),
-            duration: 600.ms,
-          )
-          .shimmer(duration: 600.ms, color: AppTheme.secondary);
-    } else {
-      chip = chip.animate().fadeIn(duration: 300.ms).slideX(
-            begin: 0.05,
-            end: 0,
-            duration: 300.ms,
-          );
-    }
+    chip = chip.animate().fadeIn(duration: 300.ms).slideX(
+          begin: 0.05,
+          end: 0,
+          duration: 300.ms,
+        );
 
     return chip;
   }

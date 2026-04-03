@@ -68,10 +68,11 @@ class _BubblePopGameState extends State<BubblePopGame>
 
     controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
+        if (!mounted) return;
         setState(() {
-          controller.dispose();
           _bubbles.removeWhere((b) => b.id == bubble.id);
         });
+        controller.dispose();
       }
     });
 
@@ -80,12 +81,13 @@ class _BubblePopGameState extends State<BubblePopGame>
   }
 
   void _popBubble(_Bubble bubble) {
+    if (!_bubbles.any((b) => b.id == bubble.id)) return;
     HapticFeedback.lightImpact();
-    bubble.controller.dispose();
     setState(() {
       _bubbles.removeWhere((b) => b.id == bubble.id);
       _popped++;
     });
+    bubble.controller.dispose();
     StorageService().incrementCounter('totalBubbles');
   }
 
@@ -112,7 +114,7 @@ class _BubblePopGameState extends State<BubblePopGame>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -163,7 +165,7 @@ class _BubblePopGameState extends State<BubblePopGame>
                   IconButton(
                     onPressed: _exit,
                     icon: const Icon(Icons.arrow_back_rounded),
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).iconTheme.color,
                   ),
                   Expanded(
                     child: Text(
@@ -176,7 +178,7 @@ class _BubblePopGameState extends State<BubblePopGame>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

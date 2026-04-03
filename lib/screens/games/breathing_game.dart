@@ -33,7 +33,7 @@ class _BreathingGameState extends State<BreathingGame> {
       _sessionKey++;
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_isRunning) {
+      if (_isRunning && mounted) {
         setState(() => _elapsedSeconds++);
       }
     });
@@ -107,10 +107,10 @@ class _BreathingGameState extends State<BreathingGame> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary)),
+        Text(label, style: Theme.of(context).textTheme.bodyMedium),
         Text(value,
-            style: const TextStyle(
-                fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -124,7 +124,7 @@ class _BreathingGameState extends State<BreathingGame> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -134,9 +134,15 @@ class _BreathingGameState extends State<BreathingGame> {
               Row(
                 children: [
                   IconButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () async {
+                      if (_hasStarted) {
+                        await _finish();
+                      }
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                    },
                     icon: const Icon(Icons.arrow_back_rounded),
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).iconTheme.color,
                   ),
                   Expanded(
                     child: Text(
@@ -175,7 +181,7 @@ class _BreathingGameState extends State<BreathingGame> {
                           decoration: BoxDecoration(
                             color: selected
                                 ? AppTheme.primary.withValues(alpha: 0.15)
-                                : Colors.white,
+                                : Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: selected
@@ -193,7 +199,7 @@ class _BreathingGameState extends State<BreathingGame> {
                                   fontWeight: FontWeight.w700,
                                   color: selected
                                       ? AppTheme.primary
-                                      : AppTheme.textPrimary,
+                                      : Theme.of(context).textTheme.bodyLarge?.color,
                                   fontSize: 14,
                                 ),
                                 textAlign: TextAlign.center,
