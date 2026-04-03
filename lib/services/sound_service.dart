@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SoundService {
@@ -12,14 +14,8 @@ class SoundService {
   bool _enabled = true;
   bool get enabled => _enabled;
 
-  late final Uint8List _popSound;
-  late final Uint8List _bellSound;
-  late final Uint8List _clickSound;
-  late final Uint8List _whooshSound;
-  late final Uint8List _softToneSound;
-  late final Uint8List _chimeSound;
-  late final Uint8List _breathInSound;
-  late final Uint8List _breathOutSound;
+  /// File paths for each sound (written to temp dir for iOS compatibility).
+  final Map<String, String> _soundPaths = {};
 
   /// Pool of pre-created players to avoid iOS cold-start latency.
   final List<AudioPlayer> _pool = [];
@@ -54,14 +50,27 @@ class SoundService {
       _pool.add(AudioPlayer());
     }
 
-    _popSound = _generatePop();
-    _bellSound = _generateBell();
-    _clickSound = _generateClick();
-    _whooshSound = _generateWhoosh();
-    _softToneSound = _generateSoftTone();
-    _chimeSound = _generateChime();
-    _breathInSound = _generateBreathIn();
-    _breathOutSound = _generateBreathOut();
+    // Generate WAV bytes and write to temp files (iOS needs file-based sources)
+    final dir = await getTemporaryDirectory();
+    final soundsDir = Directory('${dir.path}/desestres_sounds');
+    if (!soundsDir.existsSync()) soundsDir.createSync();
+
+    Future<void> writeSound(String name, Uint8List wav) async {
+      final path = '${soundsDir.path}/$name.wav';
+      await File(path).writeAsBytes(wav, flush: true);
+      _soundPaths[name] = path;
+    }
+
+    await Future.wait([
+      writeSound('pop', _generatePop()),
+      writeSound('bell', _generateBell()),
+      writeSound('click', _generateClick()),
+      writeSound('whoosh', _generateWhoosh()),
+      writeSound('softTone', _generateSoftTone()),
+      writeSound('chime', _generateChime()),
+      writeSound('breathIn', _generateBreathIn()),
+      writeSound('breathOut', _generateBreathOut()),
+    ]);
   }
 
   Future<void> toggle() async {
@@ -70,25 +79,27 @@ class SoundService {
     await prefs.setBool(_key, _enabled);
   }
 
-  Future<void> playPop() => _play(_popSound);
-  Future<void> playBell() => _play(_bellSound);
-  Future<void> playClick() => _play(_clickSound);
-  Future<void> playWhoosh() => _play(_whooshSound);
-  Future<void> playSoftTone() => _play(_softToneSound);
-  Future<void> playChime() => _play(_chimeSound);
-  Future<void> playBreathIn() => _play(_breathInSound);
-  Future<void> playBreathOut() => _play(_breathOutSound);
+  Future<void> playPop() => _play('pop');
+  Future<void> playBell() => _play('bell');
+  Future<void> playClick() => _play('click');
+  Future<void> playWhoosh() => _play('whoosh');
+  Future<void> playSoftTone() => _play('softTone');
+  Future<void> playChime() => _play('chime');
+  Future<void> playBreathIn() => _play('breathIn');
+  Future<void> playBreathOut() => _play('breathOut');
 
   int _poolIndex = 0;
 
-  Future<void> _play(Uint8List wav) async {
+  Future<void> _play(String name) async {
     if (!_enabled) return;
+    final path = _soundPaths[name];
+    if (path == null) return;
     try {
       // Round-robin through pre-created players for low latency
       final player = _pool[_poolIndex];
       _poolIndex = (_poolIndex + 1) % _poolSize;
-      await player.stop(); // Stop any previous sound on this player
-      await player.play(BytesSource(wav));
+      await player.stop();
+      await player.play(DeviceFileSource(path));
     } catch (_) {
       // Silently fail — sounds are non-critical
     }
