@@ -14,13 +14,10 @@ class SoundService {
   bool _enabled = true;
   bool get enabled => _enabled;
 
-  /// File paths for each sound (written to temp dir for iOS compatibility).
+  /// File paths for each sound (written to temp dir).
   final Map<String, String> _soundPaths = {};
 
-  /// Raw WAV bytes for each sound (used on Android via BytesSource).
-  final Map<String, Uint8List> _soundBytes = {};
-
-  /// Pool of pre-created players to avoid iOS cold-start latency.
+  /// Pool of pre-created players for low-latency playback.
   final List<AudioPlayer> _pool = [];
   static const _poolSize = 4;
 
@@ -59,7 +56,6 @@ class SoundService {
     if (!soundsDir.existsSync()) soundsDir.createSync();
 
     Future<void> writeSound(String name, Uint8List wav) async {
-      _soundBytes[name] = wav;
       final path = '${soundsDir.path}/$name.wav';
       await File(path).writeAsBytes(wav, flush: true);
       _soundPaths[name] = path;
@@ -97,19 +93,12 @@ class SoundService {
   Future<void> _play(String name) async {
     if (!_enabled) return;
     final path = _soundPaths[name];
-    final bytes = _soundBytes[name];
-    if (path == null || bytes == null) return;
+    if (path == null) return;
     try {
-      // Round-robin through pre-created players for low latency
       final player = _pool[_poolIndex];
       _poolIndex = (_poolIndex + 1) % _poolSize;
       await player.stop();
-      // iOS needs file-based source; Android works best with in-memory bytes
-      if (Platform.isIOS) {
-        await player.play(DeviceFileSource(path));
-      } else {
-        await player.play(BytesSource(bytes));
-      }
+      await player.play(DeviceFileSource(path));
     } catch (_) {
       // Silently fail — sounds are non-critical
     }
