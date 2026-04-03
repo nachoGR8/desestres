@@ -18,10 +18,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    GamesHubScreen(),
-    MoodScreen(),
-    StatsScreen(),
+  final List<Widget> _screens = [
+    const GamesHubScreen(),
+    const MoodScreen(),
+    const StatsScreen(),
   ];
 
   bool get _moodLoggedToday => StorageService().getTodayMood() != null;

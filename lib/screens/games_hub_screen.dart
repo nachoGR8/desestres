@@ -11,9 +11,14 @@ import 'sos_calm_screen.dart';
 import 'gratitude_screen.dart';
 import 'cartas_screen.dart';
 
-class GamesHubScreen extends StatelessWidget {
+class GamesHubScreen extends StatefulWidget {
   const GamesHubScreen({super.key});
 
+  @override
+  State<GamesHubScreen> createState() => _GamesHubScreenState();
+}
+
+class _GamesHubScreenState extends State<GamesHubScreen> {
   static final _startDate = DateTime(2025, 4, 5);
 
   @override
@@ -83,7 +88,7 @@ class GamesHubScreen extends StatelessWidget {
             GestureDetector(
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const SosCalmScreen()),
-              ),
+              ).then((_) => setState(() {})),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 18),
@@ -133,7 +138,7 @@ class GamesHubScreen extends StatelessWidget {
                     color: AppTheme.secondary,
                     onTap: () => Navigator.of(context).push(
                       WavePageRoute(builder: (_) => const GratitudeScreen()),
-                    ),
+                    ).then((_) => setState(() {})),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -144,7 +149,7 @@ class GamesHubScreen extends StatelessWidget {
                     color: AppTheme.accentPink,
                     onTap: () => Navigator.of(context).push(
                       WavePageRoute(builder: (_) => const CartasScreen()),
-                    ),
+                    ).then((_) => setState(() {})),
                   ),
                 ),
               ],
@@ -214,7 +219,7 @@ class GamesHubScreen extends StatelessWidget {
   void _openGame(BuildContext context, Widget game) {
     Navigator.of(context).push(
       WavePageRoute(builder: (_) => game),
-    );
+    ).then((_) => setState(() {}));
   }
 }
 
