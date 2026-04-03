@@ -112,7 +112,7 @@ class _PimplePopGameState extends State<PimplePopGame>
 
     pimple.tapCount++;
     HapticFeedback.lightImpact();
-    SoundService().playClick();
+    SoundService().playSquish();
 
     // Visual squeeze bump per tap
     pimple.squeezeProgress = (pimple.tapCount / pimple.tapsNeeded).clamp(0.0, 1.0);
@@ -131,7 +131,7 @@ class _PimplePopGameState extends State<PimplePopGame>
     pimple.squeezing = true;
     pimple.squeezeStart = DateTime.now();
     HapticFeedback.lightImpact();
-    SoundService().playClick();
+    SoundService().playSquelch();
     setState(() {});
     pimple.squeezeTicker?.cancel();
     pimple.squeezeTicker = Timer.periodic(
@@ -182,10 +182,16 @@ class _PimplePopGameState extends State<PimplePopGame>
     pimple.squeezing = false;
 
     HapticFeedback.heavyImpact();
-    SoundService().playPop();
+    SoundService().playSplat();
     Future.delayed(const Duration(milliseconds: 80), () {
       HapticFeedback.mediumImpact();
     });
+    // Secondary wet sound for extra juice on big pops
+    if (pimple.type == _PimpleType.cyst || pimple.squeezeProgress > 0.9) {
+      Future.delayed(const Duration(milliseconds: 120), () {
+        SoundService().playSquish();
+      });
+    }
 
     // Update combo
     _comboResetTimer?.cancel();

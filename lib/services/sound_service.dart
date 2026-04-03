@@ -70,6 +70,9 @@ class SoundService {
       writeSound('chime', _generateChime()),
       writeSound('breathIn', _generateBreathIn()),
       writeSound('breathOut', _generateBreathOut()),
+      writeSound('squelch', _generateSquelch()),
+      writeSound('squish', _generateSquish()),
+      writeSound('splat', _generateSplat()),
     ]);
   }
 
@@ -87,6 +90,9 @@ class SoundService {
   Future<void> playChime() => _play('chime');
   Future<void> playBreathIn() => _play('breathIn');
   Future<void> playBreathOut() => _play('breathOut');
+  Future<void> playSquelch() => _play('squelch');
+  Future<void> playSquish() => _play('squish');
+  Future<void> playSplat() => _play('splat');
 
   int _poolIndex = 0;
 
@@ -278,6 +284,95 @@ class SoundService {
           sin(2 * pi * freq * 1.5 * t) * 0.15 +
           sin(2 * pi * freq * 2 * t) * 0.05;
       return tone * envelope * 0.12;
+    });
+    return _createWav(samples, _sampleRate);
+  }
+
+  /// Squelch: wet squishy sound for starting to squeeze a pimple (150ms)
+  /// Filtered noise burst with a low descending tone — like pressing wet skin.
+  Uint8List _generateSquelch() {
+    const duration = 0.18;
+    final n = (_sampleRate * duration).round();
+    final rng = Random(42);
+    final noise = List<double>.generate(n, (_) => rng.nextDouble() * 2 - 1);
+    // Heavy low-pass for wet quality
+    for (int pass = 0; pass < 3; pass++) {
+      for (int i = 1; i < n; i++) {
+        noise[i] = noise[i - 1] * 0.88 + noise[i] * 0.12;
+      }
+    }
+    final samples = List<double>.generate(n, (i) {
+      final t = i / _sampleRate;
+      final attack = (t < 0.005) ? t / 0.005 : 1.0;
+      final release = exp(-t * 18);
+      final envelope = attack * release;
+      // Low descending tone for body
+      final freq = 180 - 80 * (t / duration);
+      final tone = sin(2 * pi * freq * t) * 0.4 +
+          sin(2 * pi * freq * 0.5 * t) * 0.2;
+      return (noise[i] * 0.6 + tone) * envelope * 0.28;
+    });
+    return _createWav(samples, _sampleRate);
+  }
+
+  /// Squish: pressure building sound for sustained squeeze (200ms)
+  /// Deeper, wetter — like flesh being compressed. Used for blackhead taps too.
+  Uint8List _generateSquish() {
+    const duration = 0.22;
+    final n = (_sampleRate * duration).round();
+    final rng = Random(77);
+    final noise = List<double>.generate(n, (_) => rng.nextDouble() * 2 - 1);
+    // Very heavy filtering for thick wet texture
+    for (int pass = 0; pass < 5; pass++) {
+      for (int i = 1; i < n; i++) {
+        noise[i] = noise[i - 1] * 0.93 + noise[i] * 0.07;
+      }
+    }
+    final samples = List<double>.generate(n, (i) {
+      final t = i / _sampleRate;
+      final progress = t / duration;
+      // Bell-shaped envelope peaking at 40%
+      final envelope = exp(-pow((progress - 0.4) / 0.3, 2));
+      // Two low tones that create a "squelching" beat
+      final tone = sin(2 * pi * 120 * t) * 0.35 +
+          sin(2 * pi * 155 * t) * 0.25 +
+          sin(2 * pi * 90 * t) * 0.15;
+      return (noise[i] * 0.5 + tone) * envelope * 0.25;
+    });
+    return _createWav(samples, _sampleRate);
+  }
+
+  /// Splat: juicy wet burst for popping a pimple (350ms)
+  /// Satisfying combination: sharp attack + wet noise tail + low thump.
+  /// Much more impactful than the gentle water-drop pop.
+  Uint8List _generateSplat() {
+    const duration = 0.38;
+    final n = (_sampleRate * duration).round();
+    final rng = Random(55);
+    final noise = List<double>.generate(n, (_) => rng.nextDouble() * 2 - 1);
+    // Medium filtering — not too clean, not too harsh
+    for (int pass = 0; pass < 2; pass++) {
+      for (int i = 1; i < n; i++) {
+        noise[i] = noise[i - 1] * 0.85 + noise[i] * 0.15;
+      }
+    }
+    final samples = List<double>.generate(n, (i) {
+      final t = i / _sampleRate;
+      // Sharp initial burst (first 30ms)
+      final burstEnv = exp(-t * 35);
+      // Wet tail that lingers
+      final tailEnv = exp(-t * 6) * 0.5;
+      // Low thump for impact
+      final thumpFreq = 100 * exp(-t * 8);
+      final thump = sin(2 * pi * thumpFreq * t) * burstEnv * 0.5;
+      // Mid-range "splat" tone
+      final splatFreq = 350 - 200 * (t / duration);
+      final splatTone = sin(2 * pi * splatFreq * t) * 0.3 * burstEnv;
+      // Higher transient for the "crack" of the pop
+      final crack = sin(2 * pi * 900 * t) * exp(-t * 50) * 0.2;
+      // Wet noise (the splash)
+      final wetNoise = noise[i] * tailEnv;
+      return (thump + splatTone + crack + wetNoise) * 0.32;
     });
     return _createWav(samples, _sampleRate);
   }
