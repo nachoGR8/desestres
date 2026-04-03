@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../services/theme_service.dart';
 import '../services/storage_service.dart';
 import '../services/sound_service.dart';
+import '../services/notification_service.dart';
 import 'games_hub_screen.dart';
 import 'mood_screen.dart';
 import 'stats_screen.dart';
@@ -106,6 +107,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       SoundService().enabled
                           ? Icons.volume_up_rounded
                           : Icons.volume_off_rounded,
+                      color: AppTheme.textHint,
+                      size: 22,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => NotificationService().toggle()),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(
+                      NotificationService().enabled
+                          ? Icons.notifications_active_rounded
+                          : Icons.notifications_off_rounded,
                       color: AppTheme.textHint,
                       size: 22,
                     ),

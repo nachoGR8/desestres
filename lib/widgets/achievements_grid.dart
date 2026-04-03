@@ -36,15 +36,17 @@ class AchievementsGrid extends StatelessWidget {
             crossAxisCount: 4,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.72,
+            childAspectRatio: 0.62,
           ),
           itemCount: allAchievements.length,
           itemBuilder: (context, index) {
             final a = allAchievements[index];
             final isUnlocked = a.check(storage);
+            final progressVal = a.progress(storage);
             return _AchievementTile(
               achievement: a,
               unlocked: isUnlocked,
+              progress: progressVal,
             ).animate().fadeIn(
                   delay: Duration(milliseconds: index * 50),
                   duration: 300.ms,
@@ -59,11 +61,18 @@ class AchievementsGrid extends StatelessWidget {
 class _AchievementTile extends StatelessWidget {
   final Achievement achievement;
   final bool unlocked;
+  final double progress;
 
-  const _AchievementTile({required this.achievement, required this.unlocked});
+  const _AchievementTile({
+    required this.achievement,
+    required this.unlocked,
+    required this.progress,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color ?? AppTheme.textPrimary;
+
     return GestureDetector(
       onTap: () => _showDetail(context),
       child: Column(
@@ -74,12 +83,13 @@ class _AchievementTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: unlocked
                   ? AppTheme.primary.withValues(alpha: 0.12)
-                  : Colors.grey.withValues(alpha: 0.08),
+                  : Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: unlocked
                   ? Border.all(
                       color: AppTheme.primary.withValues(alpha: 0.3))
-                  : null,
+                  : Border.all(
+                      color: Colors.grey.withValues(alpha: 0.15)),
             ),
             child: Center(
               child: Text(
@@ -89,12 +99,29 @@ class _AchievementTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
+          // Progress bar for locked achievements
+          if (!unlocked)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 4,
+                  backgroundColor: Colors.grey.withValues(alpha: 0.12),
+                  valueColor: AlwaysStoppedAnimation(
+                    AppTheme.primary.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 3),
           Text(
             unlocked ? achievement.title : '???',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: unlocked ? AppTheme.textPrimary : AppTheme.textHint,
+              color: unlocked ? textColor : AppTheme.textHint,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -109,6 +136,7 @@ class _AchievementTile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -122,9 +150,31 @@ class _AchievementTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               achievement.description,
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textHint),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 12),
+            // Progress bar in dialog
+            if (!unlocked) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor: Colors.grey.withValues(alpha: 0.12),
+                  valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: TextStyle(
+                  color: AppTheme.textHint,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             Text(
               unlocked ? '✅ Desbloqueado' : '🔒 Bloqueado',

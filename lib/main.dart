@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'services/storage_service.dart';
 import 'services/theme_service.dart';
 import 'services/sound_service.dart';
+import 'services/notification_service.dart';
 import 'app.dart';
 
 void main() async {
@@ -23,6 +24,7 @@ void main() async {
   await StorageService().init();
   await ThemeService().init();
   await SoundService().init();
+  await NotificationService().init();
 
   runApp(const DesestresApp());
 }
