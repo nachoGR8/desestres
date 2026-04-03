@@ -29,6 +29,7 @@ class _PimplePopGameState extends State<PimplePopGame>
   int _combo = 0;
   DateTime? _lastPopTime;
   static const _comboDuration = Duration(milliseconds: 2500);
+  Timer? _comboResetTimer;
 
   // Screen shake
   double _shakeX = 0;
@@ -187,6 +188,7 @@ class _PimplePopGameState extends State<PimplePopGame>
     });
 
     // Update combo
+    _comboResetTimer?.cancel();
     final now = DateTime.now();
     if (_lastPopTime != null && now.difference(_lastPopTime!) < _comboDuration) {
       _combo++;
@@ -194,6 +196,10 @@ class _PimplePopGameState extends State<PimplePopGame>
       _combo = 1;
     }
     _lastPopTime = now;
+    // Auto-reset combo after window expires
+    _comboResetTimer = Timer(_comboDuration, () {
+      if (mounted) setState(() => _combo = 0);
+    });
 
     // Show combo text if ≥ 2
     if (_combo >= 2) {
@@ -278,16 +284,17 @@ class _PimplePopGameState extends State<PimplePopGame>
       Offset center, double size, _PimpleType type, double intensity) {
     final controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: const Duration(milliseconds: 1500),
     );
 
-    final streamCount = 3 + (intensity * 5).round() + _random.nextInt(3);
+    // More pus streams for bigger, juicier pops
+    final streamCount = 6 + (intensity * 8).round() + _random.nextInt(5);
     final streams = List.generate(streamCount, (i) {
       final baseAngle = i * 2 * pi / streamCount;
-      final angle = baseAngle + (_random.nextDouble() - 0.5) * 1.2;
-      final speed = 0.7 + _random.nextDouble() * 0.9 + intensity * 0.5;
-      final length = 0.5 + _random.nextDouble() * 0.7;
-      final thickness = 2.5 + _random.nextDouble() * 5 + intensity * 2;
+      final angle = baseAngle + (_random.nextDouble() - 0.5) * 1.4;
+      final speed = 0.9 + _random.nextDouble() * 1.3 + intensity * 0.7;
+      final length = 0.6 + _random.nextDouble() * 0.9;
+      final thickness = 3.5 + _random.nextDouble() * 7 + intensity * 3;
       return _PusStream(
         angle: angle,
         speed: speed,
@@ -296,13 +303,14 @@ class _PimplePopGameState extends State<PimplePopGame>
       );
     });
 
-    final dropCount = 5 + _random.nextInt(6) + (intensity * 3).round();
+    // Many more splatter drops
+    final dropCount = 10 + _random.nextInt(10) + (intensity * 6).round();
     final drops = List.generate(dropCount, (i) {
       return _PusDrop(
         angle: _random.nextDouble() * 2 * pi,
-        distance: 0.6 + _random.nextDouble() * 1.2,
-        size: 2.5 + _random.nextDouble() * 5,
-        delay: _random.nextDouble() * 0.25,
+        distance: 0.5 + _random.nextDouble() * 1.8,
+        size: 2.0 + _random.nextDouble() * 7,
+        delay: _random.nextDouble() * 0.35,
       );
     });
 
@@ -320,15 +328,15 @@ class _PimplePopGameState extends State<PimplePopGame>
     controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         if (!mounted) return;
-        final markCount = 1 + _random.nextInt(3);
+        final markCount = 2 + _random.nextInt(4);
         for (int i = 0; i < markCount; i++) {
           final markOffset = Offset(
-            center.dx + (_random.nextDouble() - 0.5) * size * 0.4,
-            center.dy + (_random.nextDouble() - 0.5) * size * 0.4,
+            center.dx + (_random.nextDouble() - 0.5) * size * 0.8,
+            center.dy + (_random.nextDouble() - 0.5) * size * 0.8,
           );
           _splatMarks.add(_SplatMark(
             center: markOffset,
-            size: size * (0.2 + _random.nextDouble() * 0.25),
+            size: size * (0.25 + _random.nextDouble() * 0.35),
             color: _pusColor(type).withValues(alpha: 0.12 + _random.nextDouble() * 0.08),
             createdAt: DateTime.now(),
             rotation: _random.nextDouble() * 2 * pi,
@@ -351,6 +359,7 @@ class _PimplePopGameState extends State<PimplePopGame>
     _active = false;
     _spawnTimer?.cancel();
     _shakeTicker?.cancel();
+    _comboResetTimer?.cancel();
     _scoreAnimCtrl.dispose();
     for (final p in _pimples) {
       p.squeezeTicker?.cancel();
@@ -696,6 +705,8 @@ class _PimplePopGameState extends State<PimplePopGame>
           return Stack(
             children: [
               _buildBurstCenter(effect, t),
+              // Secondary burst ring expanding outward
+              if (t < 0.6) _buildBurstRing(effect, t),
               ...effect.streams.map((s) => _buildPusStream(effect, s, t)),
               ...effect.drops
                   .where((d) => t > d.delay)
@@ -754,10 +765,36 @@ class _PimplePopGameState extends State<PimplePopGame>
     );
   }
 
+  Widget _buildBurstRing(_PusEffect effect, double t) {
+    final ringT = (t * 3).clamp(0.0, 1.0);
+    final ringSize = effect.size * (0.5 + ringT * 1.8);
+    final ringOpacity = (1.0 - ringT * 1.8).clamp(0.0, 0.5);
+    final ringWidth = (4.0 - ringT * 3).clamp(0.5, 4.0);
+
+    return Positioned(
+      left: effect.center.dx - ringSize / 2,
+      top: effect.center.dy - ringSize / 2,
+      child: Opacity(
+        opacity: ringOpacity,
+        child: Container(
+          width: ringSize,
+          height: ringSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: _pusColor(effect.type).withValues(alpha: 0.6),
+              width: ringWidth,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBurstCenter(_PusEffect effect, double t) {
     final burstProgress = (t * 2.5).clamp(0.0, 1.0);
-    final fadeOut = (1.0 - (t - 0.4).clamp(0.0, 1.0) * 1.67).clamp(0.0, 1.0);
-    final burstSize = effect.size * (0.35 + burstProgress * 0.5);
+    final fadeOut = (1.0 - (t - 0.5).clamp(0.0, 1.0) * 1.4).clamp(0.0, 1.0);
+    final burstSize = effect.size * (0.45 + burstProgress * 0.65);
 
     return Positioned(
       left: effect.center.dx - burstSize / 2,
@@ -796,16 +833,16 @@ class _PimplePopGameState extends State<PimplePopGame>
     final opacity = (1.0 - t * 0.85).clamp(0.0, 1.0);
 
     return Stack(
-      children: List.generate(5, (i) {
-        final blobT = (easedT - i * 0.075 * stream.length).clamp(0.0, 1.0);
+      children: List.generate(8, (i) {
+        final blobT = (easedT - i * 0.055 * stream.length).clamp(0.0, 1.0);
         if (blobT <= 0) return const SizedBox.shrink();
 
         final blobDist = effect.size * stream.speed * blobT;
         final px = effect.center.dx + cos(stream.angle) * blobDist;
         final py = effect.center.dy + sin(stream.angle) * blobDist;
 
-        final blobSize = stream.thickness * (1.0 - i * 0.15) * (1.0 - t * 0.35);
-        final blobOpacity = opacity * (1.0 - i * 0.18);
+        final blobSize = stream.thickness * (1.0 - i * 0.10) * (1.0 - t * 0.30);
+        final blobOpacity = opacity * (1.0 - i * 0.11);
 
         final gravityOffset = sin(stream.angle + pi / 2).abs() * blobT * effect.size * 0.15;
 
