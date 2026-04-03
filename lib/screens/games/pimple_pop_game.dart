@@ -226,13 +226,22 @@ class _PimplePopGameState extends State<PimplePopGame>
     controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         if (!mounted) return;
-        // Leave a splat mark behind
-        _splatMarks.add(_SplatMark(
-          center: center,
-          size: size * 0.3,
-          color: _pusColor(type).withValues(alpha: 0.15),
-          createdAt: DateTime.now(),
-        ));
+        // Leave irregular splat marks behind
+        final markCount = 1 + _random.nextInt(3);
+        for (int i = 0; i < markCount; i++) {
+          final markOffset = Offset(
+            center.dx + (_random.nextDouble() - 0.5) * size * 0.4,
+            center.dy + (_random.nextDouble() - 0.5) * size * 0.4,
+          );
+          _splatMarks.add(_SplatMark(
+            center: markOffset,
+            size: size * (0.2 + _random.nextDouble() * 0.25),
+            color: _pusColor(type).withValues(alpha: 0.12 + _random.nextDouble() * 0.08),
+            createdAt: DateTime.now(),
+            rotation: _random.nextDouble() * 2 * pi,
+            irregularity: 0.7 + _random.nextDouble() * 0.3,
+          ));
+        }
         // Clean old marks
         _splatMarks.removeWhere((m) =>
             DateTime.now().difference(m.createdAt).inSeconds > 8);
@@ -297,16 +306,18 @@ class _PimplePopGameState extends State<PimplePopGame>
             // Skin texture dots
             ..._buildSkinTexture(),
 
-            // Splat marks that linger
+            // Splat marks that linger (irregular shapes)
             ..._splatMarks.map((mark) => Positioned(
                   left: mark.center.dx - mark.size / 2,
                   top: mark.center.dy - mark.size / 2,
-                  child: Container(
-                    width: mark.size,
-                    height: mark.size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: mark.color,
+                  child: Transform.rotate(
+                    angle: mark.rotation,
+                    child: CustomPaint(
+                      size: Size(mark.size, mark.size),
+                      painter: _SplatPainter(
+                        color: mark.color,
+                        irregularity: mark.irregularity,
+                      ),
                     ),
                   ),
                 )),
@@ -381,7 +392,7 @@ class _PimplePopGameState extends State<PimplePopGame>
   }
 
   List<Widget> _buildSkinTexture() {
-    // Deterministic small pore dots for skin feel
+    // Deterministic small pore dots for skin feel with subtle animation response
     final rng = Random(42);
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
@@ -389,15 +400,30 @@ class _PimplePopGameState extends State<PimplePopGame>
       final x = rng.nextDouble() * screenW;
       final y = 80 + rng.nextDouble() * (screenH - 160);
       final s = 2.0 + rng.nextDouble() * 2;
+
+      // Check if any pimple is being squeezed nearby for micro-animation
+      double proximityEffect = 0.0;
+      for (final pimple in _pimples) {
+        if (pimple.squeezeProgress > 0) {
+          final distance = ((x - pimple.x).abs() + (y - pimple.y).abs()) / 100;
+          if (distance < 3) {
+            proximityEffect = ((3 - distance) / 3) * pimple.squeezeProgress;
+          }
+        }
+      }
+
+      final enhancedAlpha = (0.15 + proximityEffect * 0.25).clamp(0.0, 1.0);
+      final enhancedSize = s * (1.0 + proximityEffect * 0.3);
+
       return Positioned(
         left: x,
         top: y,
         child: Container(
-          width: s,
-          height: s,
+          width: enhancedSize,
+          height: enhancedSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFFD4A98A).withValues(alpha: 0.15),
+            color: const Color(0xFFD4A98A).withValues(alpha: enhancedAlpha),
           ),
         ),
       );
@@ -739,12 +765,16 @@ class _SplatMark {
   final double size;
   final Color color;
   final DateTime createdAt;
+  final double rotation;
+  final double irregularity;
 
   _SplatMark({
     required this.center,
     required this.size,
     required this.color,
     required this.createdAt,
+    required this.rotation,
+    required this.irregularity,
   });
 }
 
@@ -987,4 +1017,52 @@ class _PimplePainter extends CustomPainter {
   @override
   bool shouldRepaint(_PimplePainter old) =>
       type != old.type || squeezeProgress != old.squeezeProgress;
+}
+
+// --- Splat Painter for irregular marks ---
+
+class _SplatPainter extends CustomPainter {
+  final Color color;
+  final double irregularity;
+
+  _SplatPainter({required this.color, required this.irregularity});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    // Create irregular splat shape using path
+    final path = Path();
+    final points = 8 + (irregularity * 6).round();
+    for (int i = 0; i < points; i++) {
+      final angle = (i / points) * 2 * pi;
+      // Vary radius for each point to create irregular shape
+      final pointRadius = radius * (0.6 + irregularity * 0.4 + (i % 3) * 0.15);
+      final x = center.dx + cos(angle) * pointRadius;
+      final y = center.dy + sin(angle) * pointRadius;
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        // Use quadratic bezier for smooth irregular edges
+        final prevAngle = ((i - 1) / points) * 2 * pi;
+        final prevRadius = radius * (0.6 + irregularity * 0.4 + ((i - 1) % 3) * 0.15);
+        final prevX = center.dx + cos(prevAngle) * prevRadius;
+        final prevY = center.dy + sin(prevAngle) * prevRadius;
+        final controlX = (prevX + x) / 2 + (irregularity - 0.5) * radius * 0.2;
+        final controlY = (prevY + y) / 2 + (irregularity - 0.5) * radius * 0.2;
+        path.quadraticBezierTo(controlX, controlY, x, y);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_SplatPainter old) =>
+      color != old.color || irregularity != old.irregularity;
 }
