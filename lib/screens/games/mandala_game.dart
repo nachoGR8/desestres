@@ -162,7 +162,7 @@ class _MandalaGameState extends State<MandalaGame>
         duration: const Duration(milliseconds: 800),
       )..forward();
       HapticFeedback.mediumImpact();
-      SoundService().playBell();
+      SoundService().playChime();
     }
   }
 

@@ -197,4 +197,14 @@ final List<Achievement> allAchievements = [
     check: (s) => s.discoveredGamesCount >= 5,
     progress: (s) => _clamp01(s.discoveredGamesCount / 5),
   ),
+
+  // --- Gratitud ---
+  Achievement(
+    id: 'gratitude_7',
+    emoji: '🌻',
+    title: 'Agradecida',
+    description: 'Escribe gratitud 7 días',
+    check: (s) => s.totalGratitudeEntries >= 7,
+    progress: (s) => _clamp01(s.totalGratitudeEntries / 7),
+  ),
 ];

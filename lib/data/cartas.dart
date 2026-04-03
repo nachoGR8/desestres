@@ -1,71 +1,74 @@
 /// Secret messages from Nacho, unlocked via achievements.
 /// Each key is an achievement ID from [allAchievements].
 const Map<String, String> cartasDeNacho = {
-  'first_mood': 'Que sepas que creé esta app solo para ti, '
-      'para que siempre tengas un rinconcito de calma. '
+  'first_mood': 'Hice esta app pensando solo en ti, '
+      'para que siempre tengas un lugar donde respirar y estar en calma. '
       'Te quiero muchísimo 🤍',
 
-  'streak_3': '3 días seguidos cuidándote... '
-      'Eso me llena de orgullo. Nunca dejes de priorizarte, mi amor 🤍',
+  'streak_3': 'Tres días seguidos dedicándote tiempo... '
+      'Me hace sentir súper orgulloso. Nunca dejes de ponerte en primer lugar, mi amor 🤍',
 
   'streak_7': '¡Una semana entera! '
-      'Cada día que te cuidas es un regalo para las dos. '
+      'Cada ratito que te cuidas es también un regalo para nosotros. '
       'Sigue así, eres increíble 🤍',
 
-  'streak_30': 'Un mes entero cuidándote todos los días. '
-      'No sabes lo feliz que me hace saber que te regalas '
-      'estos momentos de paz. Te admiro 🤍',
+  'streak_30': 'Un mes entero sin fallarte ni un solo día. '
+      'No sabes lo feliz que me hace ver cómo te regalas '
+      'estos momentos de paz. Te admiro muchísimo 🤍',
 
-  'first_breath': 'Tu primera respiración consciente... '
-      'Ese es el primer paso para la calma. '
-      'Respira profundo, yo estoy contigo 🤍',
+  'first_breath': 'Tu primera respiración profunda... '
+      'Es el primer paso para encontrar tu centro. '
+      'Suelta el aire despacio, aquí estoy contigo 🤍',
 
-  'breath_20': '20 veces que elegiste parar y respirar. '
-      '20 veces que te elegiste a ti. '
-      'Eres más fuerte de lo que crees 🤍',
+  'breath_20': 'Ya van 20 veces que decides parar un momento y simplemente respirar. '
+      '20 veces eligiéndote a ti. '
+      'Eres mucho más fuerte de lo que crees 🤍',
 
-  'breath_50': '¡50 sesiones! Ya eres toda una experta en calma. '
-      'Me encanta saber que encuentras paz aquí 🤍',
+  'breath_50': '¡50 sesiones! Ya eres toda una experta en esto de desconectar. '
+      'Me hace muy feliz saber que este rinconcito te da paz 🤍',
 
-  'breath_60min': 'Una hora entera dedicada a respirar y estar en paz. '
-      'Eso dice mucho de la persona tan bonita que eres 🤍',
+  'breath_60min': 'Ya sumas una hora entera dedicada a respirar y estar tranquila. '
+      'Eso dice muchísimo de lo bonita y constante que eres 🤍',
 
-  'breath_120min': '2 horas de pura dedicación a tu bienestar. '
-      'Eres la persona más disciplinada y fuerte que conozco 🤍',
+  'breath_120min': 'Dos horas en total dedicadas a tu bienestar. '
+      'De verdad, eres la persona más disciplinada y fuerte que conozco 🤍',
 
-  'bubbles_100': '100 burbujas reventadas = 100 momentos de desconexión. '
-      'Cada pop es un poquito de estrés que se va 🤍',
+  'bubbles_100': '100 burbujas = 100 momentos de desconexión. '
+      'Ojalá cada "pop" se haya llevado un poquito de tu estrés 🤍',
 
-  'bubbles_500': '500 burbujas... ¡Eres la reina de la calma! '
-      'Me encanta que uses esta app tanto 🤍',
+  'bubbles_500': '500 burbujas... ¡Oficialmente eres la reina de la calma! '
+      'Me encanta ver que usas tanto la app 🤍',
 
-  'worries_20': '20 preocupaciones que soltaste. '
-      'Que bonito es dejar ir lo que no puedes controlar. '
-      'Estoy orgulloso de ti 🤍',
+  'worries_20': '20 preocupaciones que lograste soltar. '
+      'Qué bonito y qué sano es dejar ir lo que no podemos controlar. '
+      'Estoy muy orgulloso de ti 🤍',
 
-  'worries_50': '50 preocupaciones disueltas. Tu mente está más ligera '
-      'y tu corazón más tranquilo. Te amo 🤍',
+  'worries_50': '50 preocupaciones que ya no pesan. Espero que sientas la mente '
+      'más ligera y el corazón mucho más tranquilo. Te amo 🤍',
 
-  'zen_10': '10 dibujos zen. Cada trazo es un momento '
-      'donde el mundo se detiene solo para ti 🤍',
+  'zen_10': '10 dibujos zen. Piensa en cada trazo como un ratito '
+      'en el que el mundo se detiene, solo para ti 🤍',
 
-  'mandala_1': 'Tu primer mandala completado. '
-      'Cada color que elegiste es un reflejo de lo bonita que eres por dentro 🤍',
+  'mandala_1': 'Tu primer mandala... '
+      'Cada color que has puesto refleja lo bonita que eres por dentro 🤍',
 
-  'mandala_5': '5 mandalas llenos de color, como tú llenas mi vida de alegría. '
-      'Eres arte, mi amor 🤍',
+  'mandala_5': '5 mandalas llenos de color, igual que tú llenas mi vida de alegría. '
+      'Eres puro arte, mi amor 🤍',
 
-  'mandala_10': '10 mandalas... Que paciencia y que belleza. '
-      'Así como cada mandala es único, tú eres única para mí 🤍',
+  'mandala_10': '10 mandalas. Qué paciencia y qué buen gusto tienes. '
+      'Y así como cada dibujo es único, tú también lo eres para mí 🤍',
 
-  'mood_14': '14 días registrando cómo te sientes. '
-      'Conocerte a ti misma es el mayor acto de amor propio 🤍',
+  'mood_14': 'Dos semanas enteras escuchando cómo te sientes. '
+      'Parar a conocerte es el acto de amor propio más bonito que hay 🤍',
 
-  'mood_30': 'Un mes entero de autoconocimiento. '
-      'Eres la persona más valiente que conozco '
-      'por enfrentar tus emociones cada día 🤍',
+  'mood_30': 'Un mes entero prestando atención a tus emociones. '
+      'Hay que ser muy valiente para mirarse por dentro todos los días. '
+      'Te admiro 🤍',
 
-  'explorer': '¡Probaste todos los juegos! '
-      'Tu curiosidad es una de las cosas que más amo de ti. '
+  'explorer': '¡Ya has probado todo! '
+      'Esa curiosidad tuya es una de las cosas que más me enamoran de ti. '
       'Nunca dejes de explorar 🤍',
+
+  'gratitude_7': 'Una semana entera dando gracias por las cosas bonitas. '
+      'Tú eres lo más bonito de mi lista, siempre 🤍',
 };

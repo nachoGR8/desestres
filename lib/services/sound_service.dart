@@ -17,6 +17,9 @@ class SoundService {
   late final Uint8List _clickSound;
   late final Uint8List _whooshSound;
   late final Uint8List _softToneSound;
+  late final Uint8List _chimeSound;
+  late final Uint8List _breathInSound;
+  late final Uint8List _breathOutSound;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -27,6 +30,9 @@ class SoundService {
     _clickSound = _generateClick();
     _whooshSound = _generateWhoosh();
     _softToneSound = _generateSoftTone();
+    _chimeSound = _generateChime();
+    _breathInSound = _generateBreathIn();
+    _breathOutSound = _generateBreathOut();
   }
 
   Future<void> toggle() async {
@@ -40,6 +46,9 @@ class SoundService {
   Future<void> playClick() => _play(_clickSound);
   Future<void> playWhoosh() => _play(_whooshSound);
   Future<void> playSoftTone() => _play(_softToneSound);
+  Future<void> playChime() => _play(_chimeSound);
+  Future<void> playBreathIn() => _play(_breathInSound);
+  Future<void> playBreathOut() => _play(_breathOutSound);
 
   Future<void> _play(Uint8List wav) async {
     if (!_enabled) return;
@@ -52,77 +61,182 @@ class SoundService {
     }
   }
 
-  // --- WAV synthesis ---
+  // --- Relaxing WAV synthesis ---
+  // All sounds tuned to soothing frequencies, soft envelopes,
+  // longer durations. Think spa / meditation.
 
-  /// Bubble pop: descending pitch burst (80ms)
+  static const _sampleRate = 44100;
+
+  /// Soft bubble pop: gentle water droplet (200ms)
+  /// Tuned to a major pentatonic interval — pleasant, not aggressive.
   Uint8List _generatePop() {
-    const sampleRate = 22050;
-    const duration = 0.08;
-    final n = (sampleRate * duration).round();
+    const duration = 0.22;
+    final n = (_sampleRate * duration).round();
     final samples = List<double>.generate(n, (i) {
-      final t = i / sampleRate;
-      final freq = 800 - t * 4000;
-      final envelope = exp(-t * 40);
-      return sin(2 * pi * freq * t) * envelope * 0.5;
+      final t = i / _sampleRate;
+      // Gentle descending tone - like a water drop ripple
+      final freq = 600 + 200 * exp(-t * 12);
+      final envelope = exp(-t * 8) * sin(pi * t / duration).clamp(0.0, 1.0);
+      // Mix fundamental with soft octave above
+      final tone = sin(2 * pi * freq * t) * 0.6 +
+          sin(2 * pi * freq * 1.5 * t) * 0.2 +
+          sin(2 * pi * freq * 2 * t) * 0.1;
+      return tone * envelope * 0.25;
     });
-    return _createWav(samples, sampleRate);
+    return _createWav(samples, _sampleRate);
   }
 
-  /// Breathing bell: harmonic mix with soft decay (400ms)
+  /// Singing bowl bell: rich harmonics with long decay (1.2s)
+  /// Inspired by Tibetan singing bowls — deeply calming.
   Uint8List _generateBell() {
-    const sampleRate = 22050;
-    const duration = 0.4;
-    final n = (sampleRate * duration).round();
+    const duration = 1.2;
+    final n = (_sampleRate * duration).round();
     final samples = List<double>.generate(n, (i) {
-      final t = i / sampleRate;
-      final envelope = exp(-t * 5);
-      final tone = sin(2 * pi * 880 * t) * 0.5 +
-          sin(2 * pi * 1320 * t) * 0.25 +
-          sin(2 * pi * 1760 * t) * 0.125;
-      return tone * envelope * 0.3;
+      final t = i / _sampleRate;
+      // Slow exponential fade
+      final envelope = exp(-t * 2.5);
+      // Singing bowl harmonics (fundamental + partials)
+      // Using 396 Hz — the "liberating" solfeggio frequency
+      final tone = sin(2 * pi * 396 * t) * 0.35 +
+          sin(2 * pi * 594 * t) * 0.20 + // Perfect fifth
+          sin(2 * pi * 792 * t) * 0.15 + // Octave
+          sin(2 * pi * 990 * t) * 0.08 + // Major third above octave
+          sin(2 * pi * 1188 * t) * 0.04; // Two octaves minus step
+      // Subtle vibrato for richness
+      final vibrato = 1.0 + 0.002 * sin(2 * pi * 5.5 * t);
+      return tone * vibrato * envelope * 0.35;
     });
-    return _createWav(samples, sampleRate);
+    return _createWav(samples, _sampleRate);
   }
 
-  /// Mandala tap: very short click (20ms)
+  /// Soft tap: warm, padded click for coloring (60ms)
+  /// Like tapping a wooden xylophone bar gently.
   Uint8List _generateClick() {
-    const sampleRate = 22050;
-    const duration = 0.02;
-    final n = (sampleRate * duration).round();
-    final rng = Random(42);
+    const duration = 0.08;
+    final n = (_sampleRate * duration).round();
     final samples = List<double>.generate(n, (i) {
-      final t = i / sampleRate;
-      final envelope = exp(-t * 200);
-      return (rng.nextDouble() * 2 - 1) * envelope * 0.3;
+      final t = i / _sampleRate;
+      // Quick attack, gentle release
+      final attack = (t < 0.003) ? t / 0.003 : 1.0;
+      final release = exp(-t * 30);
+      final envelope = attack * release;
+      // Warm wooden tone — 440 Hz with soft harmonics
+      final tone = sin(2 * pi * 440 * t) * 0.5 +
+          sin(2 * pi * 660 * t) * 0.2 +
+          sin(2 * pi * 880 * t) * 0.05;
+      return tone * envelope * 0.18;
     });
-    return _createWav(samples, sampleRate);
+    return _createWav(samples, _sampleRate);
   }
 
-  /// Worry dissolve: gentle noise sweep (300ms)
+  /// Ocean whoosh: gentle wave washing away (600ms)
+  /// Noise filtered through a slow envelope — like a small wave.
   Uint8List _generateWhoosh() {
-    const sampleRate = 22050;
-    const duration = 0.3;
-    final n = (sampleRate * duration).round();
+    const duration = 0.65;
+    final n = (_sampleRate * duration).round();
     final rng = Random(99);
+    // Pre-generate noise
+    final noise = List<double>.generate(n, (_) => rng.nextDouble() * 2 - 1);
+    // Simple low-pass filter
+    for (int i = 1; i < n; i++) {
+      noise[i] = noise[i - 1] * 0.92 + noise[i] * 0.08;
+    }
     final samples = List<double>.generate(n, (i) {
-      final t = i / sampleRate;
-      final envelope = sin(pi * t / duration);
-      return (rng.nextDouble() * 2 - 1) * envelope * 0.15;
+      final t = i / _sampleRate;
+      // Bell-shaped envelope that peaks at 30%
+      final peak = duration * 0.3;
+      final envelope = exp(-pow((t - peak) / (duration * 0.25), 2));
+      // Add a very subtle carried tone
+      final tone = sin(2 * pi * 180 * t) * 0.05;
+      return (noise[i] + tone) * envelope * 0.12;
     });
-    return _createWav(samples, sampleRate);
+    return _createWav(samples, _sampleRate);
   }
 
-  /// Zen draw start: soft sine tone (150ms)
+  /// Zen tone: warm sine pad (300ms)
+  /// 528 Hz — the "transformation" solfeggio frequency.
+  /// Soft attack and release for drawing strokes.
   Uint8List _generateSoftTone() {
-    const sampleRate = 22050;
-    const duration = 0.15;
-    final n = (sampleRate * duration).round();
+    const duration = 0.32;
+    final n = (_sampleRate * duration).round();
     final samples = List<double>.generate(n, (i) {
-      final t = i / sampleRate;
-      final envelope = sin(pi * t / duration);
-      return sin(2 * pi * 528 * t) * envelope * 0.2;
+      final t = i / _sampleRate;
+      // Slow attack (50ms) + sine release
+      final attack = min(t / 0.05, 1.0);
+      final release = cos((t / duration) * (pi / 2));
+      final envelope = attack * release;
+      // Warm 528 Hz with subtle octave below for body
+      final tone = sin(2 * pi * 528 * t) * 0.45 +
+          sin(2 * pi * 264 * t) * 0.25 +
+          sin(2 * pi * 792 * t) * 0.08;
+      return tone * envelope * 0.2;
     });
-    return _createWav(samples, sampleRate);
+    return _createWav(samples, _sampleRate);
+  }
+
+  /// Wind chime: cascading crystal tones (1.5s)
+  /// For achievement unlocks, mandala completion — celebratory but gentle.
+  Uint8List _generateChime() {
+    const duration = 1.5;
+    final n = (_sampleRate * duration).round();
+    // Pentatonic notes (in Hz) — always pleasant
+    const notes = [523.25, 587.33, 659.26, 783.99, 880.0];
+    final samples = List<double>.filled(n, 0.0);
+
+    for (int c = 0; c < notes.length; c++) {
+      final noteStart = c * 0.12; // Stagger each note
+      final freq = notes[c];
+      for (int i = 0; i < n; i++) {
+        final t = i / _sampleRate;
+        if (t < noteStart) continue;
+        final tNote = t - noteStart;
+        final envelope = exp(-tNote * 3.5) *
+            (tNote < 0.005 ? tNote / 0.005 : 1.0);
+        samples[i] += sin(2 * pi * freq * tNote) * envelope * 0.12 +
+            sin(2 * pi * freq * 2 * tNote) * envelope * 0.04;
+      }
+    }
+    return _createWav(samples, _sampleRate);
+  }
+
+  /// Breath in: gentle rising tone (1.2s)
+  /// A soft "ahhh" rising pad to guide inhalation.
+  Uint8List _generateBreathIn() {
+    const duration = 1.2;
+    final n = (_sampleRate * duration).round();
+    final samples = List<double>.generate(n, (i) {
+      final t = i / _sampleRate;
+      final progress = t / duration;
+      // Slow attack + sustain — no harsh onset
+      final envelope = sin(progress * pi * 0.5) * 0.8;
+      // Gently rising pitch from 200 to 280 Hz
+      final freq = 200 + 80 * progress;
+      final tone = sin(2 * pi * freq * t) * 0.35 +
+          sin(2 * pi * freq * 1.5 * t) * 0.15 +
+          sin(2 * pi * freq * 2 * t) * 0.05;
+      return tone * envelope * 0.12;
+    });
+    return _createWav(samples, _sampleRate);
+  }
+
+  /// Breath out: gentle descending tone (1.5s)
+  /// A soft falling pad to guide exhalation — slightly longer.
+  Uint8List _generateBreathOut() {
+    const duration = 1.5;
+    final n = (_sampleRate * duration).round();
+    final samples = List<double>.generate(n, (i) {
+      final t = i / _sampleRate;
+      final progress = t / duration;
+      // Fade out gently
+      final envelope = cos(progress * pi * 0.5) * 0.8;
+      // Gently falling pitch from 280 to 180 Hz
+      final freq = 280 - 100 * progress;
+      final tone = sin(2 * pi * freq * t) * 0.35 +
+          sin(2 * pi * freq * 1.5 * t) * 0.15 +
+          sin(2 * pi * freq * 2 * t) * 0.05;
+      return tone * envelope * 0.12;
+    });
+    return _createWav(samples, _sampleRate);
   }
 
   /// Build 16-bit mono PCM WAV from float samples [-1, 1].
