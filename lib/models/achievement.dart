@@ -188,14 +188,32 @@ final List<Achievement> allAchievements = [
     progress: (s) => _clamp01(s.getCounter('totalMandalas') / 10),
   ),
 
+  // --- Granitos ---
+  Achievement(
+    id: 'pimples_50',
+    emoji: '😌',
+    title: 'Piel limpia',
+    description: 'Revienta 50 granitos',
+    check: (s) => s.getCounter('totalPimples') >= 50,
+    progress: (s) => _clamp01(s.getCounter('totalPimples') / 50),
+  ),
+  Achievement(
+    id: 'pimples_200',
+    emoji: '✨',
+    title: 'Dermatóloga',
+    description: 'Revienta 200 granitos',
+    check: (s) => s.getCounter('totalPimples') >= 200,
+    progress: (s) => _clamp01(s.getCounter('totalPimples') / 200),
+  ),
+
   // --- General ---
   Achievement(
     id: 'explorer',
     emoji: '🧩',
     title: 'Descubridor',
-    description: 'Prueba los 5 juegos',
-    check: (s) => s.discoveredGamesCount >= 5,
-    progress: (s) => _clamp01(s.discoveredGamesCount / 5),
+    description: 'Prueba los 6 juegos',
+    check: (s) => s.discoveredGamesCount >= 6,
+    progress: (s) => _clamp01(s.discoveredGamesCount / 6),
   ),
 
   // --- Gratitud ---

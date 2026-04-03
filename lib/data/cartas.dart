@@ -58,6 +58,13 @@ const Map<String, String> cartasDeNacho = {
   'mandala_10': '10 mandalas. Qué paciencia y qué buen gusto tienes. '
       'Y así como cada dibujo es único, tú también lo eres para mí 🤍',
 
+  'pimples_50': '50 granitos reventados... ¡Qué satisfacción! '
+      'Cada popping es un poquito de estrés que se va. '
+      'Sigue cuidando de ti, preciosa 🤍',
+
+  'pimples_200': '200 granitos. Oficialmente eres la reina del popping. '
+      'Me encanta que tengas tu rinconcito para desestresarte 🤍',
+
   'mood_14': 'Dos semanas enteras escuchando cómo te sientes. '
       'Parar a conocerte es el acto de amor propio más bonito que hay 🤍',
 

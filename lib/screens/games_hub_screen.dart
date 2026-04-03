@@ -7,6 +7,7 @@ import 'games/bubble_pop_game.dart';
 import 'games/zen_draw_game.dart';
 import 'games/worry_jar_game.dart';
 import 'games/mandala_game.dart';
+import 'games/pimple_pop_game.dart';
 import 'sos_calm_screen.dart';
 import 'gratitude_screen.dart';
 import 'cartas_screen.dart';
@@ -199,6 +200,13 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
                   emoji: '🔮',
                   color: AppTheme.primaryLight,
                   onTap: () => _openGame(context, const MandalaGame()),
+                ),
+                _GameCard(
+                  title: 'Granitos',
+                  subtitle: 'Reviéntalos todos',
+                  emoji: '😌',
+                  color: AppTheme.accentPink,
+                  onTap: () => _openGame(context, const PimplePopGame()),
                 ),
               ]
                   .animate(interval: 100.ms)

@@ -36,13 +36,13 @@ class _BubblePopGameState extends State<BubblePopGame>
   @override
   void initState() {
     super.initState();
-    _spawnTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
-      if (_active && _bubbles.length < 15) {
+    _spawnTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (_active && _bubbles.length < 25) {
         _addBubble();
       }
     });
     // Add initial bubbles
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 8; i++) {
       Future.delayed(Duration(milliseconds: i * 200), () {
         if (mounted && _active) _addBubble();
       });
