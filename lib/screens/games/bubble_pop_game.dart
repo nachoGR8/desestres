@@ -16,6 +16,7 @@ class BubblePopGame extends StatefulWidget {
 class _BubblePopGameState extends State<BubblePopGame>
     with TickerProviderStateMixin {
   final List<_Bubble> _bubbles = [];
+  final List<_PopEffect> _popEffects = [];
   final Random _random = Random();
   Timer? _spawnTimer;
   int _popped = 0;
@@ -85,6 +86,24 @@ class _BubblePopGameState extends State<BubblePopGame>
     if (!_bubbles.any((b) => b.id == bubble.id)) return;
     HapticFeedback.lightImpact();
     SoundService().playPop();
+
+    // Capture position before removing
+    final progress = bubble.controller.value;
+    final screenSize = MediaQuery.of(context).size;
+    final safeLeft = bubble.x * (screenSize.width - bubble.size);
+    final wobble = sin(progress * bubble.wobbleSpeed * 2 * pi +
+            bubble.wobbleOffset) *
+        20;
+    final y = screenSize.height -
+        (progress * (screenSize.height + bubble.size + 100));
+    final center = Offset(
+      safeLeft + wobble + bubble.size / 2,
+      y + bubble.size / 2,
+    );
+
+    // Spawn pop effect
+    _spawnPopEffect(center, bubble.size, bubble.color);
+
     setState(() {
       _bubbles.removeWhere((b) => b.id == bubble.id);
       _popped++;
@@ -93,12 +112,50 @@ class _BubblePopGameState extends State<BubblePopGame>
     StorageService().incrementCounter('totalBubbles');
   }
 
+  void _spawnPopEffect(Offset center, double bubbleSize, Color color) {
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    final particles = List.generate(8, (i) {
+      final angle = i * pi / 4 + _random.nextDouble() * 0.3;
+      final speed = 0.6 + _random.nextDouble() * 0.8;
+      return _Particle(angle: angle, speed: speed);
+    });
+
+    final effect = _PopEffect(
+      id: DateTime.now().microsecondsSinceEpoch + _random.nextInt(9999),
+      center: center,
+      size: bubbleSize,
+      color: color,
+      controller: controller,
+      particles: particles,
+    );
+
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (!mounted) return;
+        setState(() {
+          _popEffects.removeWhere((e) => e.id == effect.id);
+        });
+        controller.dispose();
+      }
+    });
+
+    setState(() => _popEffects.add(effect));
+    controller.forward();
+  }
+
   @override
   void dispose() {
     _active = false;
     _spawnTimer?.cancel();
     for (final b in _bubbles) {
       b.controller.dispose();
+    }
+    for (final e in _popEffects) {
+      e.controller.dispose();
     }
     super.dispose();
   }
@@ -153,6 +210,61 @@ class _BubblePopGameState extends State<BubblePopGame>
                         opacity: (1.0 - progress * 0.3).clamp(0.3, 1.0),
                       ),
                     ),
+                  );
+                },
+              );
+            }),
+            // Pop effects
+            ..._popEffects.map((effect) {
+              return AnimatedBuilder(
+                animation: effect.controller,
+                builder: (context, child) {
+                  final t = effect.controller.value;
+                  final opacity = (1.0 - t).clamp(0.0, 1.0);
+                  return Stack(
+                    children: [
+                      // Expanding ring
+                      Positioned(
+                        left: effect.center.dx - effect.size * (0.5 + t * 0.4),
+                        top: effect.center.dy - effect.size * (0.5 + t * 0.4),
+                        child: Opacity(
+                          opacity: opacity * 0.5,
+                          child: Container(
+                            width: effect.size * (1.0 + t * 0.8),
+                            height: effect.size * (1.0 + t * 0.8),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: effect.color,
+                                width: 2 * (1 - t),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Particles
+                      ...effect.particles.map((p) {
+                        final dist = effect.size * 0.8 * t * p.speed;
+                        final px = effect.center.dx + cos(p.angle) * dist - 4;
+                        final py = effect.center.dy + sin(p.angle) * dist - 4;
+                        final pSize = 8.0 * (1 - t * 0.6);
+                        return Positioned(
+                          left: px,
+                          top: py,
+                          child: Opacity(
+                            opacity: opacity,
+                            child: Container(
+                              width: pSize,
+                              height: pSize,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: effect.color,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
                   );
                 },
               );
@@ -235,6 +347,31 @@ class _Bubble {
     required this.wobbleOffset,
     required this.wobbleSpeed,
   });
+}
+
+class _PopEffect {
+  final int id;
+  final Offset center;
+  final double size;
+  final Color color;
+  final AnimationController controller;
+  final List<_Particle> particles;
+
+  _PopEffect({
+    required this.id,
+    required this.center,
+    required this.size,
+    required this.color,
+    required this.controller,
+    required this.particles,
+  });
+}
+
+class _Particle {
+  final double angle;
+  final double speed;
+
+  _Particle({required this.angle, required this.speed});
 }
 
 class _BubbleWidget extends StatelessWidget {
