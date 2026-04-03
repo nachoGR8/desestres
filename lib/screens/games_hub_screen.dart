@@ -8,6 +8,7 @@ import 'games/zen_draw_game.dart';
 import 'games/worry_jar_game.dart';
 import 'games/mandala_game.dart';
 import 'games/pimple_pop_game.dart';
+import 'garden_screen.dart';
 import 'sos_calm_screen.dart';
 import 'gratitude_screen.dart';
 import 'cartas_screen.dart';
@@ -129,9 +130,20 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
                 ),
             const SizedBox(height: 16),
 
-            // Quick access: Gratitude + Cartas
+            // Quick access: Garden + Gratitude + Cartas
             Row(
               children: [
+                Expanded(
+                  child: _QuickCard(
+                    emoji: '🌱',
+                    label: 'Mi Jardín',
+                    color: const Color(0xFF5AAF4A),
+                    onTap: () => Navigator.of(context).push(
+                      WavePageRoute(builder: (_) => const GardenScreen()),
+                    ).then((_) => setState(() {})),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _QuickCard(
                     emoji: '📝',
@@ -146,7 +158,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
                 Expanded(
                   child: _QuickCard(
                     emoji: '💌',
-                    label: 'Cartas de Nacho',
+                    label: 'Cartas',
                     color: AppTheme.accentPink,
                     onTap: () => Navigator.of(context).push(
                       WavePageRoute(builder: (_) => const CartasScreen()),

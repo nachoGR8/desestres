@@ -216,6 +216,24 @@ final List<Achievement> allAchievements = [
     progress: (s) => _clamp01(s.discoveredGamesCount / 6),
   ),
 
+  // --- Jardín ---
+  Achievement(
+    id: 'garden_7',
+    emoji: '🌱',
+    title: 'Jardinera novata',
+    description: 'Riega tu planta 7 días',
+    check: (s) => s.getCounter('gardenDaysWatered') >= 7,
+    progress: (s) => _clamp01(s.getCounter('gardenDaysWatered') / 7),
+  ),
+  Achievement(
+    id: 'garden_30',
+    emoji: '🌳',
+    title: 'Árbol de amor',
+    description: 'Riega 30 días — crece un árbol',
+    check: (s) => s.getCounter('gardenDaysWatered') >= 30,
+    progress: (s) => _clamp01(s.getCounter('gardenDaysWatered') / 30),
+  ),
+
   // --- Gratitud ---
   Achievement(
     id: 'gratitude_7',

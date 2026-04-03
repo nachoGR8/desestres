@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/storage_service.dart';
@@ -74,7 +75,9 @@ class _BubblePopGameState extends State<BubblePopGame>
         setState(() {
           _bubbles.removeWhere((b) => b.id == bubble.id);
         });
-        controller.dispose();
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          controller.dispose();
+        });
       }
     });
 
@@ -104,11 +107,15 @@ class _BubblePopGameState extends State<BubblePopGame>
     // Spawn pop effect
     _spawnPopEffect(center, bubble.size, bubble.color);
 
+    final ctrl = bubble.controller;
     setState(() {
       _bubbles.removeWhere((b) => b.id == bubble.id);
       _popped++;
     });
-    bubble.controller.dispose();
+    // Dispose after frame so AnimatedBuilder can remove its listener first
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      ctrl.dispose();
+    });
     StorageService().incrementCounter('totalBubbles');
   }
 
@@ -177,13 +184,6 @@ class _BubblePopGameState extends State<BubblePopGame>
       body: SafeArea(
         child: Stack(
           children: [
-            // Background tap area
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () {},
-                behavior: HitTestBehavior.translucent,
-              ),
-            ),
             // Bubbles
             ..._bubbles.map((bubble) {
               return AnimatedBuilder(
@@ -203,6 +203,7 @@ class _BubblePopGameState extends State<BubblePopGame>
                     left: safeLeft + wobble,
                     top: y,
                     child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () => _popBubble(bubble),
                       child: _BubbleWidget(
                         size: bubble.size,
@@ -214,9 +215,10 @@ class _BubblePopGameState extends State<BubblePopGame>
                 },
               );
             }),
-            // Pop effects
+            // Pop effects (IgnorePointer so they don't block bubble taps)
             ..._popEffects.map((effect) {
-              return AnimatedBuilder(
+              return IgnorePointer(
+                child: AnimatedBuilder(
                 animation: effect.controller,
                 builder: (context, child) {
                   final t = effect.controller.value;
@@ -267,6 +269,7 @@ class _BubblePopGameState extends State<BubblePopGame>
                     ],
                   );
                 },
+              ),
               );
             }),
             // Header

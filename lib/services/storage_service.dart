@@ -97,6 +97,8 @@ class StorageService {
     if (newStreak > bestStreak) {
       await _streakBox.put('bestStreak', newStreak);
     }
+    // Auto-water the garden on any activity
+    await waterGarden();
   }
 
   int get currentStreak => _streakBox.get('currentStreak', defaultValue: 0) as int;
@@ -185,5 +187,66 @@ class StorageService {
   Set<String> get cartasRead {
     final raw = _streakBox.get('cartasRead', defaultValue: '') as String;
     return raw.isEmpty ? <String>{} : raw.split(',').toSet();
+  }
+
+  // --- Garden ---
+
+  Future<void> waterGarden() async {
+    await incrementCounter('gardenWater');
+    final now = DateTime.now();
+    final todayKey =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final lastKey = _streakBox.get('gardenLastWaterDate') as String?;
+    if (lastKey != todayKey) {
+      await incrementCounter('gardenDaysWatered');
+      await _streakBox.put('gardenLastWaterDate', todayKey);
+    }
+  }
+
+  DateTime? getLastGardenWaterDate() {
+    final raw = _streakBox.get('gardenLastWaterDate') as String?;
+    if (raw == null) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  // --- Weekly Summary ---
+
+  Map<String, dynamic> getWeeklySummary() {
+    final now = DateTime.now();
+    final moods = getMoods(lastDays: 7);
+    final sessions = getSessions(lastDays: 7);
+
+    double avgMood = 0;
+    if (moods.isNotEmpty) {
+      avgMood = moods.fold(0, (sum, m) => sum + m.level) / moods.length;
+    }
+
+    final totalBreathingSec =
+        sessions.fold(0, (sum, s) => sum + s.durationSeconds);
+
+    // Count activity days this week
+    final allDates = activityDates;
+    int activeDays = 0;
+    for (int i = 0; i < 7; i++) {
+      final d = now.subtract(Duration(days: i));
+      final key =
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      if (allDates.contains(key)) activeDays++;
+    }
+
+    // Gratitude count this week
+    final gratitude = getPastGratitude(days: 7);
+    final gratitudeDays = gratitude.length;
+
+    return {
+      'moodCount': moods.length,
+      'avgMood': avgMood,
+      'sessionCount': sessions.length,
+      'breathingSec': totalBreathingSec,
+      'activeDays': activeDays,
+      'gratitudeDays': gratitudeDays,
+      'currentStreak': currentStreak,
+      'bestStreak': bestStreak,
+    };
   }
 }

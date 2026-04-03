@@ -78,4 +78,11 @@ const Map<String, String> cartasDeNacho = {
 
   'gratitude_7': 'Una semana entera dando gracias por las cosas bonitas. '
       'Tú eres lo más bonito de mi lista, siempre 🤍',
+
+  'garden_7': 'Una semana regando tu plantita... '
+      'Así como ella crece con tu cariño, yo también crezco contigo cada día 🤍',
+
+  'garden_30': 'Un mes entero cuidando de tu jardín. '
+      'Ese árbol es el reflejo de todo lo que has construido: '
+      'fuerza, constancia y mucho amor propio. Te admiro 🤍',
 };
