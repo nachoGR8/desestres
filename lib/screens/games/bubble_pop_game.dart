@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/storage_service.dart';
+import '../../services/sound_service.dart';
 
 class BubblePopGame extends StatefulWidget {
   const BubblePopGame({super.key});
@@ -83,6 +84,7 @@ class _BubblePopGameState extends State<BubblePopGame>
   void _popBubble(_Bubble bubble) {
     if (!_bubbles.any((b) => b.id == bubble.id)) return;
     HapticFeedback.lightImpact();
+    SoundService().playPop();
     setState(() {
       _bubbles.removeWhere((b) => b.id == bubble.id);
       _popped++;

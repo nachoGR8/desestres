@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/storage_service.dart';
+import '../../services/sound_service.dart';
 
 class ZenDrawGame extends StatefulWidget {
   const ZenDrawGame({super.key});
@@ -31,6 +32,7 @@ class _ZenDrawGameState extends State<ZenDrawGame>
 
   void _onPanStart(DragStartDetails details) {
     _hasDrawn = true;
+    SoundService().playSoftTone();
     final controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 6),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
+import '../services/sound_service.dart';
 
 enum BreathingPhase { inhale, holdIn, exhale, holdOut }
 
@@ -165,6 +166,7 @@ class BreathingCircleState extends State<BreathingCircle>
 
     if (newPhase != _currentPhase) {
       HapticFeedback.lightImpact();
+      SoundService().playBell();
       setState(() {
         _currentPhase = newPhase;
         _phaseSecondsRemaining = newSeconds;

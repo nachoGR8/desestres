@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../services/storage_service.dart';
+import '../../services/sound_service.dart';
 
 class WorryJarGame extends StatefulWidget {
   const WorryJarGame({super.key});
@@ -35,6 +36,7 @@ class _WorryJarGameState extends State<WorryJarGame> {
 
   void _dissolveWorry(_Worry worry) {
     HapticFeedback.mediumImpact();
+    SoundService().playWhoosh();
     setState(() {
       _worries.removeWhere((w) => w.id == worry.id);
       _dissolvedCount++;

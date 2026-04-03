@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/theme_service.dart';
 import '../services/storage_service.dart';
+import '../services/sound_service.dart';
 import 'games_hub_screen.dart';
 import 'mood_screen.dart';
 import 'stats_screen.dart';
@@ -97,6 +98,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildNavItem(0, Icons.sports_esports_rounded, 'Jugar'),
                 _buildNavItem(1, Icons.emoji_emotions_rounded, 'Ánimo'),
                 _buildNavItem(2, Icons.bar_chart_rounded, 'Progreso'),
+                GestureDetector(
+                  onTap: () => setState(() => SoundService().toggle()),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(
+                      SoundService().enabled
+                          ? Icons.volume_up_rounded
+                          : Icons.volume_off_rounded,
+                      color: AppTheme.textHint,
+                      size: 22,
+                    ),
+                  ),
+                ),
                 GestureDetector(
                   onTap: () => ThemeService().toggle(),
                   child: Padding(

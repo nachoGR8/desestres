@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/storage_service.dart';
 import 'services/theme_service.dart';
+import 'services/sound_service.dart';
 import 'app.dart';
 
 void main() async {
@@ -21,6 +22,7 @@ void main() async {
   await initializeDateFormatting('es');
   await StorageService().init();
   await ThemeService().init();
+  await SoundService().init();
 
   runApp(const DesestresApp());
 }

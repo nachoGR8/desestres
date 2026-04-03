@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/storage_service.dart';
+import '../../services/sound_service.dart';
 
 class MandalaGame extends StatefulWidget {
   const MandalaGame({super.key});
@@ -41,6 +42,7 @@ class _MandalaGameState extends State<MandalaGame> {
 
   void _tapCell(int ring, int sector) {
     HapticFeedback.lightImpact();
+    SoundService().playClick();
     setState(() {
       _hasColored = true;
       if (ring == -1) {
