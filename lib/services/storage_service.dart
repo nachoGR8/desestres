@@ -84,8 +84,8 @@ class StorageService {
     int newStreak;
     if (lastDateStr != null) {
       final lastDate = DateTime.parse(lastDateStr);
-      final diff = DateTime(now.year, now.month, now.day)
-          .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
+      final diff = DateTime.utc(now.year, now.month, now.day)
+          .difference(DateTime.utc(lastDate.year, lastDate.month, lastDate.day))
           .inDays;
       newStreak = diff == 1 ? currentStreak + 1 : 1;
     } else {
