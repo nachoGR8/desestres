@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../models/mood_entry.dart';
 import '../services/storage_service.dart';
 import '../widgets/mood_selector.dart';
+import '../widgets/mood_calendar.dart';
 
 class MoodScreen extends StatefulWidget {
   const MoodScreen({super.key});
@@ -200,6 +201,15 @@ class _MoodScreenState extends State<MoodScreen> {
                 ),
               ),
             ],
+            const SizedBox(height: 24),
+
+            // Calendar view
+            Text(
+              'Calendario',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            MoodCalendar(allEntries: StorageService().getAllMoods()),
             const SizedBox(height: 24),
           ],
         ),

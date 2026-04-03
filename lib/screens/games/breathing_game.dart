@@ -19,6 +19,7 @@ class _BreathingGameState extends State<BreathingGame> {
   bool _hasStarted = false;
   int _cyclesCompleted = 0;
   int _elapsedSeconds = 0;
+  int _sessionKey = 0;
   Timer? _timer;
 
   BreathingPattern get _pattern => breathingPatterns[_selectedPatternIndex];
@@ -29,6 +30,7 @@ class _BreathingGameState extends State<BreathingGame> {
       _hasStarted = true;
       _cyclesCompleted = 0;
       _elapsedSeconds = 0;
+      _sessionKey++;
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_isRunning) {
@@ -57,6 +59,7 @@ class _BreathingGameState extends State<BreathingGame> {
         patternName: _pattern.name,
       );
       await StorageService().saveSession(session);
+      await StorageService().discoverGame('breathing');
       await StorageService().recordActivity();
     }
 
@@ -214,6 +217,7 @@ class _BreathingGameState extends State<BreathingGame> {
               ],
               const Spacer(),
               BreathingCircle(
+                key: ValueKey(_sessionKey),
                 pattern: _pattern,
                 isRunning: _isRunning,
                 onCycleComplete: _onCycleComplete,

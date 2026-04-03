@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/theme_service.dart';
+import '../services/storage_service.dart';
 import 'games_hub_screen.dart';
 import 'mood_screen.dart';
 import 'stats_screen.dart';
@@ -20,16 +22,64 @@ class _HomeScreenState extends State<HomeScreen> {
     StatsScreen(),
   ];
 
+  bool get _moodLoggedToday => StorageService().getTodayMood() != null;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: Column(
+        children: [
+          // Reminder banner
+          if (!_moodLoggedToday && _currentIndex != 1)
+            SafeArea(
+              bottom: false,
+              child: GestureDetector(
+                onTap: () => setState(() => _currentIndex = 1),
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [
+                      AppTheme.primary.withValues(alpha: 0.08),
+                      AppTheme.secondary.withValues(alpha: 0.08),
+                    ]),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🤍', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '¿Cómo te sientes hoy?',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodyLarge
+                                ?.color,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded,
+                          size: 20, color: AppTheme.textHint),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
               color: AppTheme.primary.withValues(alpha: 0.08),
@@ -47,6 +97,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildNavItem(0, Icons.sports_esports_rounded, 'Jugar'),
                 _buildNavItem(1, Icons.emoji_emotions_rounded, 'Ánimo'),
                 _buildNavItem(2, Icons.bar_chart_rounded, 'Progreso'),
+                GestureDetector(
+                  onTap: () => ThemeService().toggle(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(
+                      ThemeService().isDark
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_rounded,
+                      color: AppTheme.textHint,
+                      size: 22,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

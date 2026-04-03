@@ -35,22 +35,27 @@ class _ZenDrawGameState extends State<ZenDrawGame>
       vsync: this,
       duration: const Duration(seconds: 6),
     );
-    _currentStroke = _ZenStroke(
+    final stroke = _ZenStroke(
       points: [details.localPosition],
       color: _currentColor,
       fadeController: controller,
     );
-    controller.addListener(() => setState(() {}));
+    _currentStroke = stroke;
+    controller.addListener(() {
+      if (mounted) setState(() {});
+    });
     controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        setState(() {
-          controller.dispose();
-          _strokes.remove(_currentStroke);
-        });
+        if (mounted) {
+          setState(() {
+            _strokes.remove(stroke);
+          });
+        }
+        controller.dispose();
       }
     });
     setState(() {
-      _strokes.add(_currentStroke!);
+      _strokes.add(stroke);
     });
   }
 
@@ -69,8 +74,10 @@ class _ZenDrawGameState extends State<ZenDrawGame>
   }
 
   void _clear() {
-    for (final s in _strokes) {
-      s.fadeController.dispose();
+    for (final s in List.of(_strokes)) {
+      if (s.fadeController.isAnimating || !s.fadeController.isCompleted) {
+        s.fadeController.dispose();
+      }
     }
     setState(() {
       _strokes.clear();
@@ -80,6 +87,8 @@ class _ZenDrawGameState extends State<ZenDrawGame>
 
   Future<void> _exit() async {
     if (_hasDrawn) {
+      await StorageService().incrementCounter('totalZenDraws');
+      await StorageService().discoverGame('zen_draw');
       await StorageService().recordActivity();
     }
     _clear();
@@ -89,7 +98,9 @@ class _ZenDrawGameState extends State<ZenDrawGame>
   @override
   void dispose() {
     for (final s in _strokes) {
-      s.fadeController.dispose();
+      if (s.fadeController.isAnimating || !s.fadeController.isCompleted) {
+        s.fadeController.dispose();
+      }
     }
     super.dispose();
   }

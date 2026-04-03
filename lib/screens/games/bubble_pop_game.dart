@@ -86,6 +86,7 @@ class _BubblePopGameState extends State<BubblePopGame>
       _bubbles.removeWhere((b) => b.id == bubble.id);
       _popped++;
     });
+    StorageService().incrementCounter('totalBubbles');
   }
 
   @override
@@ -102,6 +103,7 @@ class _BubblePopGameState extends State<BubblePopGame>
     _active = false;
     _spawnTimer?.cancel();
     if (_popped > 0) {
+      await StorageService().discoverGame('bubbles');
       await StorageService().recordActivity();
     }
     if (mounted) Navigator.pop(context);

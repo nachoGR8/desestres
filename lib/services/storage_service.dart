@@ -102,6 +102,28 @@ class StorageService {
   int get currentStreak => _streakBox.get('currentStreak', defaultValue: 0) as int;
   int get bestStreak => _streakBox.get('bestStreak', defaultValue: 0) as int;
 
+  // --- Counters (for achievements) ---
+
+  int getCounter(String key) => _streakBox.get(key, defaultValue: 0) as int;
+
+  Future<void> incrementCounter(String key, [int amount = 1]) async {
+    final current = getCounter(key);
+    await _streakBox.put(key, current + amount);
+  }
+
+  Future<void> discoverGame(String gameName) async {
+    final raw = _streakBox.get('gamesDiscovered', defaultValue: '') as String;
+    final games = raw.isEmpty ? <String>{} : raw.split(',').toSet();
+    if (games.add(gameName)) {
+      await _streakBox.put('gamesDiscovered', games.join(','));
+    }
+  }
+
+  int get discoveredGamesCount {
+    final raw = _streakBox.get('gamesDiscovered', defaultValue: '') as String;
+    return raw.isEmpty ? 0 : raw.split(',').length;
+  }
+
   Set<String> get activityDates {
     final moods = _moodBox.keys.cast<String>().toSet();
     final sessionDates = _sessionBox.values.map((s) {

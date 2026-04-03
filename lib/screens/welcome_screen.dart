@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../data/love_phrases.dart';
@@ -62,38 +63,53 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ),
           ),
           child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(flex: 3),
-                  Icon(
-                    Icons.favorite,
-                    size: 48,
-                    color: AppTheme.primary.withValues(alpha: 0.6),
-                  )
-                      .animate()
-                      .scale(
-                        begin: const Offset(0.5, 0.5),
-                        end: const Offset(1.0, 1.0),
-                        duration: 800.ms,
-                        curve: Curves.elasticOut,
+            child: Stack(
+              children: [
+                // Floating particles
+                ..._buildParticles(),
+                // Content
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Spacer(flex: 3),
+                      Icon(
+                        Icons.favorite,
+                        size: 48,
+                        color: AppTheme.primary.withValues(alpha: 0.6),
                       )
-                      .fadeIn(duration: 600.ms),
-                  const SizedBox(height: 32),
-                  Text(
-                    _phrase,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          height: 1.4,
-                          color: AppTheme.textPrimary,
-                        ),
-                  )
-                      .animate()
-                      .fadeIn(delay: 400.ms, duration: 800.ms)
-                      .slideY(
+                          .animate()
+                          .scale(
+                            begin: const Offset(0.5, 0.5),
+                            end: const Offset(1.0, 1.0),
+                            duration: 800.ms,
+                            curve: Curves.elasticOut,
+                          )
+                          .fadeIn(duration: 600.ms)
+                          .then()
+                          .animate(
+                            onPlay: (c) => c.repeat(reverse: true),
+                          )
+                          .scale(
+                            begin: const Offset(1.0, 1.0),
+                            end: const Offset(1.15, 1.15),
+                            duration: 1200.ms,
+                            curve: Curves.easeInOut,
+                          ),
+                      const SizedBox(height: 32),
+                      Text(
+                        _phrase,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                              color: AppTheme.textPrimary,
+                            ),
+                      )
+                          .animate()
+                          .fadeIn(delay: 400.ms, duration: 800.ms)
+                          .slideY(
                         begin: 0.15,
                         end: 0,
                         delay: 400.ms,
@@ -125,9 +141,43 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 ],
               ),
             ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _buildParticles() {
+    final rng = Random(42);
+    return List.generate(15, (i) {
+      final size = 6.0 + rng.nextDouble() * 18;
+      final left = rng.nextDouble() * 350;
+      final top = rng.nextDouble() * 700;
+      final delay = (rng.nextDouble() * 2000).toInt();
+      final duration = 3000 + rng.nextInt(4000);
+      return Positioned(
+        left: left,
+        top: top,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppTheme.primary.withValues(alpha: 0.06 + rng.nextDouble() * 0.06),
+          ),
+        )
+            .animate(onPlay: (c) => c.repeat(reverse: true))
+            .moveY(
+              begin: 0,
+              end: -20 - rng.nextDouble() * 30,
+              duration: Duration(milliseconds: duration),
+              delay: Duration(milliseconds: delay),
+              curve: Curves.easeInOut,
+            )
+            .fadeIn(duration: 1500.ms, delay: Duration(milliseconds: delay)),
+      );
+    });
   }
 }

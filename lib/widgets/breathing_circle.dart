@@ -181,7 +181,7 @@ class BreathingCircleState extends State<BreathingCircle>
       _buildAnimation();
     }
     if (widget.isRunning && !oldWidget.isRunning) {
-      _controller.forward(from: _controller.value);
+      _controller.forward(from: 0);
     } else if (!widget.isRunning && oldWidget.isRunning) {
       _controller.stop();
     }

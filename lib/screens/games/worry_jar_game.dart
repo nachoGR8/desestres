@@ -46,11 +46,13 @@ class _WorryJarGameState extends State<WorryJarGame>
         _worries.removeWhere((w) => w.id == worry.id);
         _dissolvedCount++;
       });
+      StorageService().incrementCounter('totalWorries');
     });
   }
 
   Future<void> _exit() async {
     if (_hasUsed) {
+      await StorageService().discoverGame('worry_jar');
       await StorageService().recordActivity();
     }
     if (mounted) Navigator.pop(context);

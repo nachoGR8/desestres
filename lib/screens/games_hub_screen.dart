@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
+import '../widgets/page_transitions.dart';
 import 'games/breathing_game.dart';
 import 'games/bubble_pop_game.dart';
 import 'games/zen_draw_game.dart';
 import 'games/worry_jar_game.dart';
+import 'games/mandala_game.dart';
 
 class GamesHubScreen extends StatelessWidget {
   const GamesHubScreen({super.key});
@@ -67,6 +69,13 @@ class GamesHubScreen extends StatelessWidget {
                     color: AppTheme.accentPink,
                     onTap: () => _openGame(context, const WorryJarGame()),
                   ),
+                  _GameCard(
+                    title: 'Mandala',
+                    subtitle: 'Colorea y relájate',
+                    emoji: '🔮',
+                    color: AppTheme.primaryLight,
+                    onTap: () => _openGame(context, const MandalaGame()),
+                  ),
                 ]
                     .animate(interval: 100.ms)
                     .fadeIn(duration: 400.ms)
@@ -85,25 +94,7 @@ class GamesHubScreen extends StatelessWidget {
 
   void _openGame(BuildContext context, Widget game) {
     Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => game,
-        transitionDuration: const Duration(milliseconds: 400),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.08),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOut,
-              )),
-              child: child,
-            ),
-          );
-        },
-      ),
+      WavePageRoute(builder: (_) => game),
     );
   }
 }

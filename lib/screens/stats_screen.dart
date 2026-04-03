@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../services/storage_service.dart';
 import '../widgets/streak_card.dart';
 import '../widgets/mood_chart.dart';
+import '../widgets/achievements_grid.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -82,6 +83,10 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
             const SizedBox(height: 12),
             MoodChart(entries: moodEntries),
+            const SizedBox(height: 24),
+
+            // Achievements
+            const AchievementsGrid(),
             const SizedBox(height: 24),
           ],
         ),

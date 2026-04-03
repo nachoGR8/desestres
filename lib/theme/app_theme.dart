@@ -104,4 +104,80 @@ class AppTheme {
       ),
     );
   }
+
+  // --- Dark Theme ---
+
+  static const Color darkBg = Color(0xFF0F172A);
+  static const Color darkSurface = Color(0xFF1E293B);
+  static const Color darkTextPrimary = Color(0xFFE2E8F0);
+  static const Color darkTextSecondary = Color(0xFF94A3B8);
+  static const Color darkTextHint = Color(0xFF64748B);
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: darkBg,
+      colorScheme: ColorScheme.dark(
+        primary: primary,
+        secondary: secondary,
+        surface: darkSurface,
+        error: accentPink,
+      ),
+      textTheme: GoogleFonts.nunitoTextTheme(ThemeData.dark().textTheme).copyWith(
+        headlineLarge: GoogleFonts.nunito(
+          fontSize: 28, fontWeight: FontWeight.w700, color: darkTextPrimary,
+        ),
+        headlineMedium: GoogleFonts.nunito(
+          fontSize: 24, fontWeight: FontWeight.w700, color: darkTextPrimary,
+        ),
+        titleLarge: GoogleFonts.nunito(
+          fontSize: 20, fontWeight: FontWeight.w600, color: darkTextPrimary,
+        ),
+        titleMedium: GoogleFonts.nunito(
+          fontSize: 16, fontWeight: FontWeight.w600, color: darkTextPrimary,
+        ),
+        bodyLarge: GoogleFonts.nunito(
+          fontSize: 16, fontWeight: FontWeight.w400, color: darkTextPrimary,
+        ),
+        bodyMedium: GoogleFonts.nunito(
+          fontSize: 14, fontWeight: FontWeight.w400, color: darkTextSecondary,
+        ),
+        labelLarge: GoogleFonts.nunito(
+          fontSize: 14, fontWeight: FontWeight.w600, color: primary,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        color: darkSurface,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          textStyle: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: darkSurface,
+        selectedItemColor: primary,
+        unselectedItemColor: darkTextHint,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.nunito(
+          fontSize: 20, fontWeight: FontWeight.w700, color: darkTextPrimary,
+        ),
+        iconTheme: const IconThemeData(color: darkTextPrimary),
+      ),
+    );
+  }
 }
