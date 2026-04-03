@@ -94,7 +94,7 @@ class _BreathingGameState extends State<BreathingGame> {
       await StorageService().recordActivity();
     }
 
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
 
     await showDialog(
       context: context,

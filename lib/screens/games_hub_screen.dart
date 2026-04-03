@@ -90,7 +90,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
             GestureDetector(
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const SosCalmScreen()),
-              ).then((_) => setState(() {})),
+              ).then((_) { if (mounted) setState(() {}); }),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 18),
@@ -140,7 +140,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
                     color: const Color(0xFF5AAF4A),
                     onTap: () => Navigator.of(context).push(
                       WavePageRoute(builder: (_) => const GardenScreen()),
-                    ).then((_) => setState(() {})),
+                    ).then((_) { if (mounted) setState(() {}); }),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -151,7 +151,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
                     color: AppTheme.secondary,
                     onTap: () => Navigator.of(context).push(
                       WavePageRoute(builder: (_) => const GratitudeScreen()),
-                    ).then((_) => setState(() {})),
+                    ).then((_) { if (mounted) setState(() {}); }),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -162,7 +162,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
                     color: AppTheme.accentPink,
                     onTap: () => Navigator.of(context).push(
                       WavePageRoute(builder: (_) => const CartasScreen()),
-                    ).then((_) => setState(() {})),
+                    ).then((_) { if (mounted) setState(() {}); }),
                   ),
                 ),
               ],
@@ -239,7 +239,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
   void _openGame(BuildContext context, Widget game) {
     Navigator.of(context).push(
       WavePageRoute(builder: (_) => game),
-    ).then((_) => setState(() {}));
+    ).then((_) { if (mounted) setState(() {}); });
   }
 }
 

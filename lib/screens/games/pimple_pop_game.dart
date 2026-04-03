@@ -256,6 +256,7 @@ class _PimplePopGameState extends State<PimplePopGame>
         return;
       }
       final decay = 1.0 - ticks / 9;
+      if (!mounted) { timer.cancel(); return; }
       setState(() {
         _shakeX = (_random.nextDouble() - 0.5) * 2 * intensity * decay;
         _shakeY = (_random.nextDouble() - 0.5) * 2 * intensity * decay;

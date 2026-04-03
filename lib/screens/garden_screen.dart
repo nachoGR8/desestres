@@ -95,8 +95,10 @@ class _GardenScreenState extends State<GardenScreen>
     });
     _waterCtrl.forward(from: 0).then((_) {
       if (mounted) {
-        setState(() => _showWaterDrop = false);
-        // Delayed sparkle after watering
+        setState(() {
+          _showWaterDrop = false;
+          _justWatered = false;
+        });
         Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted) SoundService().playChime();
         });
