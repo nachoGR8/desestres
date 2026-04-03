@@ -80,6 +80,13 @@ class BreathingCircleState extends State<BreathingCircle>
     _controller = AnimationController(vsync: this);
     _buildAnimation();
     _phaseSecondsRemaining = widget.pattern.inhaleSeconds;
+    if (widget.isRunning) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.isRunning) {
+          _controller.forward(from: 0);
+        }
+      });
+    }
   }
 
   void _buildAnimation() {

@@ -17,15 +17,46 @@ class _BreathingGameState extends State<BreathingGame> {
   int _selectedPatternIndex = 0;
   bool _isRunning = false;
   bool _hasStarted = false;
+  bool _isCountingDown = false;
+  int _countdownValue = 0;
   int _cyclesCompleted = 0;
   int _elapsedSeconds = 0;
   int _sessionKey = 0;
   Timer? _timer;
+  Timer? _countdownTimer;
+
+  static const _countdownMessages = [
+    'Respira... 🤍',
+    '1',
+    '2',
+    '3',
+    'Prepárate...',
+  ];
 
   BreathingPattern get _pattern => breathingPatterns[_selectedPatternIndex];
 
-  void _start() {
+  void _beginCountdown() {
     setState(() {
+      _isCountingDown = true;
+      _countdownValue = 4; // "Prepárate..." then 3, 2, 1, "Respira..."
+    });
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_countdownValue <= 0) {
+        timer.cancel();
+        _startBreathing();
+      } else {
+        setState(() => _countdownValue--);
+      }
+    });
+  }
+
+  void _startBreathing() {
+    setState(() {
+      _isCountingDown = false;
       _isRunning = true;
       _hasStarted = true;
       _cyclesCompleted = 0;
@@ -118,6 +149,7 @@ class _BreathingGameState extends State<BreathingGame> {
   @override
   void dispose() {
     _timer?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
@@ -156,11 +188,20 @@ class _BreathingGameState extends State<BreathingGame> {
               ),
               const SizedBox(height: 8),
               Text(
-                _hasStarted ? _pattern.name : 'Elige un patrón y comienza',
-                style: Theme.of(context).textTheme.bodyMedium,
+                _isCountingDown
+                    ? _countdownMessages[_countdownValue]
+                    : _hasStarted
+                        ? _pattern.name
+                        : 'Elige un patrón y comienza',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: _isCountingDown && _countdownValue >= 1 && _countdownValue <= 3
+                          ? 28
+                          : null,
+                      fontWeight: _isCountingDown ? FontWeight.w700 : null,
+                    ),
               ),
               const SizedBox(height: 24),
-              if (!_hasStarted) ...[
+              if (!_hasStarted && !_isCountingDown) ...[
                 SizedBox(
                   height: 90,
                   child: ListView.separated(
@@ -239,17 +280,19 @@ class _BreathingGameState extends State<BreathingGame> {
                 ),
                 const SizedBox(height: 24),
               ],
-              if (!_hasStarted)
+              if (!_hasStarted && !_isCountingDown)
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _start,
+                    onPressed: _beginCountdown,
                     child: const Text('Comenzar'),
                   ),
                 )
                     .animate()
                     .fadeIn(duration: 400.ms)
                     .slideY(begin: 0.2, end: 0, duration: 400.ms)
+              else if (_isCountingDown)
+                const SizedBox(height: 56)
               else
                 Row(
                   children: [
@@ -290,19 +333,18 @@ class _BreathingGameState extends State<BreathingGame> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
           Text(value,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary)),
+                  color: Theme.of(context).textTheme.bodyLarge?.color)),
           Text(label,
-              style: const TextStyle(
-                  fontSize: 12, color: AppTheme.textSecondary)),
+              style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
     );
