@@ -175,6 +175,7 @@ class BreathingCircleState extends State<BreathingCircle>
       HapticFeedback.lightImpact();
       // Play contextual sound based on breathing phase
       if (newPhase == BreathingPhase.inhale) {
+        SoundService().playAmbientPad();
         SoundService().playBreathIn();
       } else if (newPhase == BreathingPhase.exhale) {
         SoundService().playBreathOut();

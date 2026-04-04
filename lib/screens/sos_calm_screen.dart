@@ -139,6 +139,7 @@ class _SosCalmScreenState extends State<SosCalmScreen>
     // Play breath sounds at phase transitions
     if (!_soundPlayed) {
       if (newPhase == 'Inhala' && progress < inhaleEnd * 0.1) {
+        SoundService().playAmbientPad();
         SoundService().playBreathIn();
         _soundPlayed = true;
       } else if (newPhase == 'Sostén' &&

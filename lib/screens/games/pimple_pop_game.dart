@@ -20,6 +20,7 @@ class _PimplePopGameState extends State<PimplePopGame>
   final List<_PusEffect> _pusEffects = [];
   final List<_SplatMark> _splatMarks = [];
   final List<_ComboText> _comboTexts = [];
+  final List<_ComboStar> _comboStars = [];
   final Random _random = Random();
   Timer? _spawnTimer;
   int _popped = 0;
@@ -40,15 +41,26 @@ class _PimplePopGameState extends State<PimplePopGame>
   late AnimationController _scoreAnimCtrl;
   int _displayedScore = 0;
 
+  // Screen flash on pop
+  double _flashOpacity = 0;
+  Timer? _flashTimer;
+
+  // Best combo tracking
+  int _bestCombo = 0;
+
+  // Start time for session summary
+  late DateTime _sessionStart;
+
   @override
   void initState() {
     super.initState();
+    _sessionStart = DateTime.now();
     _scoreAnimCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
     _spawnTimer = Timer.periodic(const Duration(milliseconds: 1400), (_) {
-      if (_active && _pimples.length < 10) _addPimple();
+      if (_active && _pimples.where((p) => !p.popping).length < 10) _addPimple();
     });
     for (int i = 0; i < 5; i++) {
       Future.delayed(Duration(milliseconds: i * 300), () {
@@ -62,8 +74,24 @@ class _PimplePopGameState extends State<PimplePopGame>
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
     final margin = size / 2 + 20;
-    final x = margin + _random.nextDouble() * (screenW - 2 * margin);
-    final y = 90 + margin + _random.nextDouble() * (screenH - 200 - 2 * margin);
+
+    // Try to find a non-overlapping position (up to 12 attempts)
+    double x = 0, y = 0;
+    bool placed = false;
+    for (int attempt = 0; attempt < 12; attempt++) {
+      x = margin + _random.nextDouble() * (screenW - 2 * margin);
+      y = 90 + margin + _random.nextDouble() * (screenH - 200 - 2 * margin);
+      bool overlaps = false;
+      for (final p in _pimples) {
+        final dist = sqrt(pow(p.x - x, 2) + pow(p.y - y, 2));
+        if (dist < (p.size + size) * 0.55) {
+          overlaps = true;
+          break;
+        }
+      }
+      if (!overlaps) { placed = true; break; }
+    }
+    if (!placed && _pimples.length >= 6) return; // Skip if too crowded
 
     final growCtrl = AnimationController(
       vsync: this,
@@ -184,11 +212,13 @@ class _PimplePopGameState extends State<PimplePopGame>
     HapticFeedback.heavyImpact();
     SoundService().playSplat();
     Future.delayed(const Duration(milliseconds: 80), () {
+      if (!mounted) return;
       HapticFeedback.mediumImpact();
     });
     // Secondary wet sound for extra juice on big pops
     if (pimple.type == _PimpleType.cyst || pimple.squeezeProgress > 0.9) {
       Future.delayed(const Duration(milliseconds: 120), () {
+        if (!mounted) return;
         SoundService().playSquish();
       });
     }
@@ -207,9 +237,20 @@ class _PimplePopGameState extends State<PimplePopGame>
       if (mounted) setState(() => _combo = 0);
     });
 
+    // Track best combo
+    if (_combo > _bestCombo) _bestCombo = _combo;
+
     // Show combo text if ≥ 2
     if (_combo >= 2) {
       _spawnComboText(Offset(pimple.x, pimple.y - pimple.size), _combo);
+    }
+
+    // Spawn celebration stars + reward sound on combos ≥ 3
+    if (_combo >= 3) {
+      _spawnComboStars(Offset(pimple.x, pimple.y), _combo);
+      if (_combo == 3 || _combo == 5 || _combo >= 8) {
+        SoundService().playRewardDing();
+      }
     }
 
     // Screen shake — stronger for cysts and combos
@@ -220,6 +261,9 @@ class _PimplePopGameState extends State<PimplePopGame>
             : 5.0;
     _triggerShake(shakeIntensity + _combo * 1.5);
 
+    // Screen flash — brief white flash for satisfying feedback
+    _triggerFlash(pimple.type == _PimpleType.cyst ? 0.18 : 0.10);
+
     _spawnPusEffect(
       Offset(pimple.x, pimple.y),
       pimple.size,
@@ -227,11 +271,9 @@ class _PimplePopGameState extends State<PimplePopGame>
       pimple.squeezeProgress,
     );
 
-    final growCtrl = pimple.growController;
-    final wobbleCtrl = pimple.wobbleController;
-
+    // Animate the pimple shrinking away instead of instant removal
+    pimple.popping = true;
     setState(() {
-      _pimples.removeWhere((p) => p.id == pimple.id);
       _popped++;
       _displayedScore = _popped;
     });
@@ -239,11 +281,70 @@ class _PimplePopGameState extends State<PimplePopGame>
     // Bounce the score
     _scoreAnimCtrl.forward(from: 0);
 
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      growCtrl.dispose();
-      wobbleCtrl.dispose();
+    // Pop shrink animation
+    final popCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    pimple.popController = popCtrl;
+    popCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (!mounted) return;
+        final growCtrl = pimple.growController;
+        final wobbleCtrl = pimple.wobbleController;
+        setState(() => _pimples.removeWhere((p) => p.id == pimple.id));
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          growCtrl.dispose();
+          wobbleCtrl.dispose();
+          popCtrl.dispose();
+        });
+      }
     });
+    popCtrl.forward();
+
     await StorageService().incrementCounter('totalPimples');
+  }
+
+  void _triggerFlash(double intensity) {
+    _flashTimer?.cancel();
+    setState(() => _flashOpacity = intensity);
+    _flashTimer = Timer(const Duration(milliseconds: 80), () {
+      if (mounted) setState(() => _flashOpacity = 0);
+    });
+  }
+
+  void _spawnComboStars(Offset center, int combo) {
+    final count = 4 + min(combo, 8);
+    for (int i = 0; i < count; i++) {
+      final ctrl = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: 600 + _random.nextInt(400)),
+      );
+      final angle = _random.nextDouble() * 2 * pi;
+      final speed = 40.0 + _random.nextDouble() * 80;
+      final star = _ComboStar(
+        id: DateTime.now().microsecondsSinceEpoch + i,
+        center: center,
+        angle: angle,
+        speed: speed,
+        size: 4.0 + _random.nextDouble() * 6,
+        color: combo >= 8
+            ? const Color(0xFFFF1744)
+            : combo >= 5
+                ? const Color(0xFFFF9100)
+                : const Color(0xFFFFC107),
+        controller: ctrl,
+      );
+      ctrl.addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          if (!mounted) return;
+          setState(() => _comboStars.removeWhere((s) => s.id == star.id));
+          ctrl.dispose();
+        }
+      });
+      setState(() => _comboStars.add(star));
+      ctrl.forward();
+    }
   }
 
   void _triggerShake(double intensity) {
@@ -367,17 +468,22 @@ class _PimplePopGameState extends State<PimplePopGame>
     _spawnTimer?.cancel();
     _shakeTicker?.cancel();
     _comboResetTimer?.cancel();
+    _flashTimer?.cancel();
     _scoreAnimCtrl.dispose();
     for (final p in _pimples) {
       p.squeezeTicker?.cancel();
       p.growController.dispose();
       p.wobbleController.dispose();
+      p.popController?.dispose();
     }
     for (final e in _pusEffects) {
       e.controller.dispose();
     }
     for (final c in _comboTexts) {
       c.controller.dispose();
+    }
+    for (final s in _comboStars) {
+      s.controller.dispose();
     }
     super.dispose();
   }
@@ -388,6 +494,72 @@ class _PimplePopGameState extends State<PimplePopGame>
     if (_popped > 0) {
       await StorageService().discoverGame('pimples');
       await StorageService().recordActivity();
+    }
+    if (!mounted) return;
+
+    // Show session summary if player popped any pimples
+    if (_popped > 0) {
+      final duration = DateTime.now().difference(_sessionStart);
+      final minutes = duration.inMinutes;
+      final seconds = duration.inSeconds % 60;
+      final timeStr = minutes > 0
+          ? '$minutes min $seconds s'
+          : '$seconds s';
+
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: Theme.of(ctx).colorScheme.surface,
+          title: Text(
+            _popped >= 20
+                ? '🎉 Increíble!'
+                : _popped >= 10
+                    ? '💪 Bien hecho!'
+                    : '😌 Relax',
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '💥 $_popped granitos reventados',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              if (_bestCombo >= 2)
+                Text(
+                  '🔥 Mejor combo: x$_bestCombo',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: _bestCombo >= 8
+                        ? const Color(0xFFFF1744)
+                        : _bestCombo >= 5
+                            ? const Color(0xFFFF9100)
+                            : const Color(0xFFFFC107),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              const SizedBox(height: 4),
+              Text(
+                '⏱ $timeStr',
+                style: TextStyle(fontSize: 13, color: AppTheme.textHint),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                'Cerrar',
+                style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      );
     }
     if (mounted) Navigator.pop(context);
   }
@@ -445,6 +617,9 @@ class _PimplePopGameState extends State<PimplePopGame>
 
               // Combo texts floating up
               ..._comboTexts.map((ct) => _buildComboText(ct)),
+
+              // Combo star particles
+              ..._comboStars.map((s) => _buildComboStar(s)),
 
               // Header
               Positioned(
@@ -521,6 +696,16 @@ class _PimplePopGameState extends State<PimplePopGame>
                   ),
                 ),
 
+              // Screen flash overlay
+              if (_flashOpacity > 0)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      color: Colors.white.withValues(alpha: _flashOpacity),
+                    ),
+                  ),
+                ),
+
               // Hint
               if (_popped == 0)
                 Positioned(
@@ -588,21 +773,29 @@ class _PimplePopGameState extends State<PimplePopGame>
   }
 
   Widget _buildPimple(_Pimple pimple) {
+    final listenables = <Listenable>[
+      pimple.growController,
+      pimple.wobbleController,
+    ];
+    if (pimple.popController != null) listenables.add(pimple.popController!);
+
     return RepaintBoundary(
       child: AnimatedBuilder(
-        animation: Listenable.merge([
-          pimple.growController,
-          pimple.wobbleController,
-        ]),
+        animation: Listenable.merge(listenables),
         builder: (context, _) {
           final grow = pimple.growController.value;
           final wobble = pimple.wobbleController.value;
           final squeeze = pimple.squeezeProgress;
 
+          // Pop animation: shrink and fade out
+          final popT = pimple.popController?.value ?? 0.0;
+          final popScale = pimple.popping ? 1.0 + popT * 0.4 : 1.0;
+          final popOpacity = pimple.popping ? (1.0 - popT).clamp(0.0, 1.0) : 1.0;
+
           final breathe = 1.0 + wobble * 0.05;
           final squeezeInflate = 1.0 + squeeze * 0.35 +
               (squeeze > 0.7 ? (squeeze - 0.7) * 0.5 : 0);
-          final scale = grow * breathe * squeezeInflate;
+          final scale = grow * breathe * squeezeInflate * popScale;
           final currentSize = pimple.size * scale;
 
           final showDeformation = squeeze > 0.1;
@@ -612,7 +805,9 @@ class _PimplePopGameState extends State<PimplePopGame>
           // Progress ring radius
           final ringRadius = currentSize / 2 + 8 + squeeze * 4;
 
-          return Stack(
+          return Opacity(
+            opacity: popOpacity,
+            child: Stack(
             children: [
               // Skin deformation when squeezing
               if (showDeformation)
@@ -674,16 +869,16 @@ class _PimplePopGameState extends State<PimplePopGame>
                 left: pimple.x - currentSize / 2,
                 top: pimple.y - currentSize / 2,
                 child: GestureDetector(
-                  onTap: pimple.type == _PimpleType.blackhead
+                  onTap: pimple.type == _PimpleType.blackhead && !pimple.popping
                       ? () => _tapPimple(pimple)
                       : null,
-                  onLongPressStart: pimple.type != _PimpleType.blackhead
+                  onLongPressStart: pimple.type != _PimpleType.blackhead && !pimple.popping
                       ? (_) => _startSqueezing(pimple)
                       : null,
-                  onLongPressEnd: pimple.type != _PimpleType.blackhead
+                  onLongPressEnd: pimple.type != _PimpleType.blackhead && !pimple.popping
                       ? (_) => _stopSqueezing(pimple)
                       : null,
-                  onLongPressCancel: pimple.type != _PimpleType.blackhead
+                  onLongPressCancel: pimple.type != _PimpleType.blackhead && !pimple.popping
                       ? () => _stopSqueezing(pimple)
                       : null,
                   behavior: HitTestBehavior.opaque,
@@ -696,6 +891,7 @@ class _PimplePopGameState extends State<PimplePopGame>
                 ),
               ),
             ],
+          ),
           );
         },
       ),
@@ -763,6 +959,40 @@ class _PimplePopGameState extends State<PimplePopGame>
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildComboStar(_ComboStar star) {
+    return AnimatedBuilder(
+      animation: star.controller,
+      builder: (context, _) {
+        final t = star.controller.value;
+        final easedT = Curves.easeOutCubic.transform(t);
+        final dist = star.speed * easedT;
+        final x = star.center.dx + cos(star.angle) * dist;
+        final y = star.center.dy + sin(star.angle) * dist - easedT * 20;
+        final opacity = (1.0 - t).clamp(0.0, 1.0);
+        final size = star.size * (1.0 - t * 0.5);
+        final rotation = t * pi * 2;
+
+        return Positioned(
+          left: x - size / 2,
+          top: y - size / 2,
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: opacity,
+              child: Transform.rotate(
+                angle: rotation,
+                child: Icon(
+                  Icons.star_rounded,
+                  size: size,
+                  color: star.color,
                 ),
               ),
             ),
@@ -964,9 +1194,11 @@ class _Pimple {
   final int tapsNeeded; // for blackheads
   int tapCount = 0;
   bool squeezing = false;
+  bool popping = false;
   double squeezeProgress = 0;
   DateTime? squeezeStart;
   Timer? squeezeTicker;
+  AnimationController? popController;
   int lastHapticPulse = -1;
 
   _Pimple({
@@ -1060,6 +1292,26 @@ class _ComboText {
     required this.id,
     required this.position,
     required this.combo,
+    required this.controller,
+  });
+}
+
+class _ComboStar {
+  final int id;
+  final Offset center;
+  final double angle;
+  final double speed;
+  final double size;
+  final Color color;
+  final AnimationController controller;
+
+  _ComboStar({
+    required this.id,
+    required this.center,
+    required this.angle,
+    required this.speed,
+    required this.size,
+    required this.color,
     required this.controller,
   });
 }
